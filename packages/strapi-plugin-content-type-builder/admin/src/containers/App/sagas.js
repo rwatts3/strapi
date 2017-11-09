@@ -6,7 +6,7 @@ import { modelsFetchSucceeded } from './actions';
 export function* deleteContentType(action) {
   try {
     if (action.sendRequest) {
-      const requestUrl = `/content-type-builder/models/${action.itemToDelete}`;
+      const requestUrl = `/content-type-builder/models/${action.itemToDelete.toLowerCase()}`;
 
       yield call(request, requestUrl, { method: 'DELETE' });
 

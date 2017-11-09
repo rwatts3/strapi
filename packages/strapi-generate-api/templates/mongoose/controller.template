@@ -15,7 +15,7 @@ module.exports = {
    */
 
   find: async (ctx) => {
-    const data = await strapi.services.<%= id %>.fetchAll(ctx.query);
+    const data = await strapi.services.<%= humanizeId %>.fetchAll(ctx.query);
 
     // Send 200 `ok`
     ctx.send(data);
@@ -28,7 +28,7 @@ module.exports = {
    */
 
   findOne: async (ctx) => {
-    const data = await strapi.services.<%= id %>.fetch(ctx.params);
+    const data = await strapi.services.<%= humanizeId %>.fetch(ctx.params);
 
     // Send 200 `ok`
     ctx.send(data);
@@ -41,7 +41,7 @@ module.exports = {
    */
 
   create: async (ctx) => {
-    const data = await strapi.services.<%= id %>.add(ctx.request.body);
+    const data = await strapi.services.<%= humanizeId %>.add(ctx.request.body);
 
     // Send 201 `created`
     ctx.created(data);
@@ -54,7 +54,7 @@ module.exports = {
    */
 
   update: async (ctx, next) => {
-    const data = await strapi.services.<%= id %>.edit(ctx.params, ctx.request.body) ;
+    const data = await strapi.services.<%= humanizeId %>.edit(ctx.params, ctx.request.body) ;
 
     // Send 200 `ok`
     ctx.send(data);
@@ -67,7 +67,7 @@ module.exports = {
    */
 
   destroy: async (ctx, next) => {
-    const data = await strapi.services.<%= id %>.remove(ctx.params);
+    const data = await strapi.services.<%= humanizeId %>.remove(ctx.params);
 
     // Send 200 `ok`
     ctx.send(data);

@@ -39,6 +39,7 @@ module.exports = (scope, cb) => {
     idPluralized: pluralize.plural(_.trim(_.camelCase(scope.id))),
     parentId: _.isEmpty(parent) ? undefined : _.trim(_.deburr(parent)),
     parentIdPluralized: _.isEmpty(scope.parentId) ? undefined : pluralize.plural(_.trim(_.camelCase(scope.parentId))),
+    model: _.upperFirst(scope.id.toLowerCase()),
     environment: process.NODE_ENV || 'development'
   });
 
@@ -92,7 +93,7 @@ module.exports = (scope, cb) => {
       return _.has(attribute, 'params.type') ? attribute : undefined;
     }
   });
-  
+
   scope.attributes = _.compact(scope.attributes);
 
   // Handle invalid action arguments.

@@ -21,9 +21,9 @@ module.exports = {
    */
 
   fetchAll: (params) => {
-    const convertedParams = strapi.utils.models.convertParams('<%= globalID.toLowerCase() %>', params);
+    const convertedParams = strapi.utils.models.convertParams('<%= humanizeId %>', params);
 
-    return <%= globalID %>.query(function(qb) {
+    return <%= model %>.query(function(qb) {
       _.forEach(convertedParams.where, (where, key) => {
         qb.where(key, where.symbol, where.value);
       });
@@ -36,7 +36,7 @@ module.exports = {
 
       qb.limit(convertedParams.limit);
     }).fetchAll({
-      withRelated: _.keys(_.groupBy(_.reject(strapi.models.<%= id %>.associations, {autoPopulate: false}), 'alias'))
+      withRelated: _.keys(_.groupBy(_.reject(strapi.models.<%= humanizeId %>.associations, {autoPopulate: false}), 'alias'))
     });
   },
 
@@ -47,8 +47,8 @@ module.exports = {
    */
 
   fetch: (params) => {
-    return <%= globalID %>.forge(_.pick(params, 'id')).fetch({
-      withRelated: _.keys(_.groupBy(_.reject(strapi.models.<%= id %>.associations, {autoPopulate: false}), 'alias'))
+    return <%= model %>.forge(_.pick(params, 'id')).fetch({
+      withRelated: _.keys(_.groupBy(_.reject(strapi.models.<%= humanizeId %>.associations, {autoPopulate: false}), 'alias'))
     });
   },
 
@@ -59,8 +59,8 @@ module.exports = {
    */
 
   add: async (values) => {
-    const data = await <%= globalID %>.forge(_.omit(values, _.keys(_.groupBy(strapi.models.<%= id %>.associations, 'alias')))).save();
-    await strapi.hook.bookshelf.manageRelations('<%= id %>', _.merge(_.clone(data.toJSON()), { values }));
+    const data = await <%= model %>.forge(_.omit(values, _.keys(_.groupBy(strapi.models.<%= humanizeId %>.associations, 'alias')))).save();
+    await strapi.hook.bookshelf.manageRelations('<%= humanizeId %>', _.merge(_.clone(data.toJSON()), { values }));
     return data;
   },
 
@@ -71,8 +71,8 @@ module.exports = {
    */
 
   edit: async (params, values) => {
-    await strapi.hook.bookshelf.manageRelations('<%= id %>', _.merge(_.clone(params), { values }));
-    return <%= globalID %>.forge(params).save(_.omit(values, _.keys(_.groupBy(strapi.models.<%= id %>.associations, 'alias'))), {path: true});
+    await strapi.hook.bookshelf.manageRelations('<%= humanizeId %>', _.merge(_.clone(params), { values }));
+    return <%= model %>.forge(params).save(_.omit(values, _.keys(_.groupBy(strapi.models.<%= humanizeId %>.associations, 'alias'))), {path: true});
   },
 
   /**
@@ -82,9 +82,9 @@ module.exports = {
    */
 
   remove: (params) => {
-    _.forEach(<%= globalID %>.associations, async association => {
-      await <%= globalID %>.forge(params)[association.alias]().detach();
+    _.forEach(<%= model %>.associations, async association => {
+      await <%= model %>.forge(params)[association.alias]().detach();
     });
-    return <%= globalID %>.forge(params).destroy();
+    return <%= model %>.forge(params).destroy();
   }
 };

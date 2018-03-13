@@ -1,6 +1,5 @@
 import { LOCATION_CHANGE } from 'react-router-redux';
-
-import { forEach, set, join, split, toLower, upperCase, map, replace } from 'lodash';
+import { forEach, set, map, replace } from 'lodash';
 import { call, take, put, fork, cancel, select, takeLatest } from 'redux-saga/effects';
 import request from 'utils/request';
 
@@ -53,14 +52,14 @@ export function* editDatabase(action) {
     const resp = yield call(request, requestUrl, opts, true);
 
     if (resp.ok) {
-      window.Strapi.notification.success('settings-manager.strapi.notification.success.databaseEdit');
+      strapi.notification.success('settings-manager.strapi.notification.success.databaseEdit');
       yield put(databaseActionSucceeded());
     }
   } catch(error) {
     const formErrors = map(error.response.payload.message, err => ({ target: err.target, errors: map(err.messages, mess => ({ id: `settings-manager.${mess.id}`})) }));
 
     yield put(databaseActionError(formErrors));
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -72,11 +71,13 @@ export function* deleteDatabase(action) {
     const resp = yield call(request, requestUrl, opts, true);
 
     if (resp.ok) {
-      window.Strapi.notification.success('settings-manager.strapi.notification.success.databaseDeleted');
+      yield call(action.context.disableGlobalOverlayBlocker);
+      strapi.notification.success('settings-manager.strapi.notification.success.databaseDeleted');
     }
   } catch(error) {
+    yield call(action.context.disableGlobalOverlayBlocker);
     yield put(databaseActionError([]));
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -86,15 +87,14 @@ export function* deleteLanguage(action) {
       method: 'DELETE',
     };
     const requestUrl = `/settings-manager/configurations/languages/${action.languageToDelete}`;
-
     const resp = yield call(request, requestUrl, opts, true);
 
     if (resp.ok) {
-      window.Strapi.notification.success('settings-manager.strapi.notification.success.languageDelete');
+      strapi.notification.success('settings-manager.strapi.notification.success.languageDelete');
     }
   } catch(error) {
     yield put(languageActionError());
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -108,7 +108,7 @@ export function* fetchConfig(action) {
     const data = yield call(request, requestUrl, opts);
     yield put(configFetchSucceded(data));
   } catch(error) {
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -127,7 +127,7 @@ export function* fetchDatabases(action) {
     ];
     yield put(databasesFetchSucceeded(listDatabasesData, appDatabaseData));
   } catch(error) {
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -145,41 +145,30 @@ export function* fetchLanguages() {
     ];
     yield put(languagesFetchSucceeded(appLanguagesData, listLanguagesData));
   } catch(error) {
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
 export function* postLanguage() {
   try {
     const newLanguage = yield select(makeSelectModifiedData());
-    const languageArray = [];
-
-    forEach(split(newLanguage['language.defaultLocale'], '_'), (value, key) => {
-      if (key === 0){
-        languageArray.push(toLower(value));
-      } else {
-        languageArray.push(upperCase(value));
-      }
-    });
-
     const body = {
-      name: join(languageArray, '_'),
+      name: newLanguage['language.defaultLocale'],
     };
     const opts = {
       body,
       method: 'POST',
     };
     const requestUrl = '/settings-manager/configurations/languages';
-
     const resp = yield call(request, requestUrl, opts, true);
 
     if (resp.ok) {
-      window.Strapi.notification.success('settings-manager.strapi.notification.success.languageAdd');
       yield put(languageActionSucceeded());
+      strapi.notification.success('settings-manager.strapi.notification.success.languageAdd');
     }
   } catch(error) {
     yield put(languageActionError());
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -196,12 +185,11 @@ export function* postDatabase(action) {
       body,
     };
     const requestUrl = `/settings-manager/configurations/databases/${action.endPoint}`;
-
     const resp = yield call(request, requestUrl, opts, true);
 
     if (resp.ok) {
       yield put(databaseActionSucceeded());
-      window.Strapi.notification.success('settings-manager.strapi.notification.success.databaseAdd');
+      strapi.notification.success('settings-manager.strapi.notification.success.databaseAdd');
     }
   } catch(error) {
     const formErrors = map(error.response.payload.message, (err) => {
@@ -212,8 +200,7 @@ export function* postDatabase(action) {
     });
 
     yield put(databaseActionError(formErrors));
-
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 
@@ -230,12 +217,12 @@ export function* settingsEdit(action) {
     const resp = yield  call(request, requestUrl, opts, true);
 
     if (resp.ok) {
-      window.Strapi.notification.success('settings-manager.strapi.notification.success.settingsEdit');
       yield put(editSettingsSucceeded());
-      yield put(unsetLoader());
+      strapi.notification.success('settings-manager.strapi.notification.success.settingsEdit');
     }
   } catch(error) {
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
+  } finally {
     yield put(unsetLoader());
   }
 }
@@ -246,12 +233,11 @@ export function* fetchSpecificDatabase(action) {
       method: 'GET',
     };
     const requestUrl = `/settings-manager/configurations/databases/${action.databaseName}/${action.endPoint}`;
-
     const data = yield call(request, requestUrl, opts);
 
     yield put(specificDatabaseFetchSucceeded(data));
   } catch(error) {
-    window.Strapi.notification.error('settings-manager.strapi.notification.error');
+    strapi.notification.error('settings-manager.strapi.notification.error');
   }
 }
 

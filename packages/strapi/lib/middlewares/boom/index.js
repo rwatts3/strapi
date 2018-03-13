@@ -12,16 +12,6 @@ const delegate = require('delegates');
 module.exports = strapi => {
   return {
     /**
-     * Default options
-     */
-
-    defaults: {
-      boom: {
-        enabled: true
-      }
-    },
-
-    /**
      * Initialize the hook
      */
 
@@ -37,12 +27,15 @@ module.exports = strapi => {
           // Log error.
           strapi.log.error(error);
 
-
           // Wrap error into a Boom's response.
           ctx.status = error.status || 500;
           ctx.body = _.get(ctx.body, 'isBoom')
             ? ctx.body || error && error.message
             : Boom.wrap(error, ctx.status, ctx.body || error.message);
+        }
+
+        if (ctx.response.headers.location) {
+          return;
         }
 
         // Empty body is considered as `notFound` response.
@@ -66,7 +59,10 @@ module.exports = strapi => {
     createResponses: function() {
       Object.keys(Boom).forEach(key => {
         strapi.app.response[key] = function(...rest) {
-          this.body = Boom[key](...rest);
+          const error = Boom[key](...rest) || {};
+
+          this.status = error.isBoom ? error.output.statusCode : this.status;
+          this.body = error;
         };
 
         this.delegator.method(key);

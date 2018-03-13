@@ -1,5 +1,8 @@
 // Important modules this config uses
+const _ = require('lodash');
 const path = require('path');
+
+const base = require('./webpack.base.babel');
 
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
@@ -9,22 +12,49 @@ const postcssReporter = require('postcss-reporter');
 const webpack = require('webpack');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const AddAssetHtmlPlugin = require('add-asset-html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 const pkg = require(path.resolve(process.cwd(), 'package.json'));
 const pluginId = pkg.name.replace(/^strapi-plugin-/i, '');
 const dllPlugin = pkg.dllPlugin;
 
 const isAdmin = process.env.IS_ADMIN === 'true';
+const isSetup = path.resolve(process.env.PWD, '..', '..') === path.resolve(process.env.INIT_CWD);
+const appPath = (() => {
+  if (process.env.APP_PATH) {
+    return process.env.APP_PATH;
+  }
+
+  return isAdmin ? path.resolve(process.env.PWD, '..') : path.resolve(process.env.PWD, '..', '..');
+})();
+const adminPath = (() => {
+  if (isSetup) {
+    return isAdmin ? path.resolve(appPath, 'strapi-admin') : path.resolve(process.env.PWD, '..');
+  }
+
+  return path.resolve(appPath, 'admin');
+})();
+
+const rootAdminpath = (() => {
+  if (isSetup) {
+    return isAdmin ? path.resolve(appPath, 'strapi-admin') : path.resolve(appPath, 'packages', 'strapi-admin');
+  }
+  return path.resolve(appPath, 'admin');
+})();
 
 const plugins = [
   new webpack.DllReferencePlugin({
-    manifest: require(path.join(__dirname, 'manifest.json')),
+    manifest: require(path.resolve(rootAdminpath, 'admin', 'src', 'config', 'manifest.json'))
   }),
   // Minify and optimize the JavaScript
   new webpack.optimize.UglifyJsPlugin({
     sourceMap: true,
+    parallel: true,
     compress: {
       warnings: false
+    },
+    uglifyOptions: {
+      ecma: 8,
     },
   }),
   new webpack.LoaderOptionsPlugin({
@@ -33,6 +63,27 @@ const plugins = [
   new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
   // new BundleAnalyzerPlugin(),
 ];
+
+let publicPath;
+
+if (isAdmin && !isSetup) {
+  // Load server configuration.
+  const serverConfig = path.resolve(appPath, 'config', 'environments', _.lowerCase(process.env.NODE_ENV), 'server.json');
+
+  try {
+    const server = require(serverConfig);
+
+    if (process.env.PWD.indexOf('/admin') !== -1) {
+      if (_.get(server, 'admin.build.host')) {
+        publicPath = _.get(server, 'admin.build.host', '/admin').replace(/\/$/, '') || '/';
+      } else {
+        publicPath = _.get(server, 'admin.path', '/admin');
+      }
+    }
+  } catch (e) {
+    throw new Error(`Impossible to access to ${serverConfig}`);
+  }
+}
 
 // Build the `index.html file`
 if (isAdmin) {
@@ -58,24 +109,35 @@ if (isAdmin) {
   plugins.push(new AddAssetHtmlPlugin({
     filepath: path.resolve(__dirname, 'dist/*.dll.js')
   }));
+  plugins.push(new CopyWebpackPlugin([{
+    from: 'config/plugins.json',
+    context: path.resolve(adminPath, 'admin', 'src'),
+    to: 'config/plugins.json'
+  }]));
 }
 
-const appPath = isAdmin
-  ? path.join(process.cwd(), 'admin', 'src', 'app.js')
-  : path.join(process.cwd(), 'node_modules', 'strapi-helper-plugin', 'lib', 'src', 'app.js');
+const main = (() => {
+  if (isAdmin && isSetup) {
+    return path.join(process.cwd(), 'admin', 'src', 'app.js');
+  } else if (isAdmin) {
+    return path.join(appPath, 'admin', 'admin', 'src', 'app.js');
+  }
 
-module.exports = require('./webpack.base.babel')({
+  return path.join(process.env.PWD, 'node_modules', 'strapi-helper-plugin', 'lib', 'src', 'app.js');
+})();
+
+module.exports = base({
   // In production, we skip all hot-reloading stuff
   entry: {
-    main: appPath
+    main
   },
 
   // Utilize long-term caching by adding content hashes (not compilation hashes) to compiled assets
-  output: {
+  output: _.omitBy({
     filename: '[name].js',
     chunkFilename: '[name].[chunkhash].chunk.js',
-    publicPath: `${isAdmin ? '/admin/' : `/${pluginId}/assets/`}`,
-  },
+    publicPath,
+  }, _.isUndefined),
 
   // In production, we minify our CSS with cssnano
   postcssPlugins: [
@@ -94,7 +156,7 @@ module.exports = require('./webpack.base.babel')({
   // Babel presets configuration
   babelPresets: [
     [
-      require.resolve('babel-preset-latest'),
+      require.resolve('babel-preset-env'),
       {
         es2015: {
           modules: false,
@@ -107,12 +169,14 @@ module.exports = require('./webpack.base.babel')({
 
   alias: {
     moment: 'moment/moment.js',
-    'lodash': path.resolve(__dirname, '..', '..', '..', 'node_modules', 'lodash'),
-    'immutable': path.resolve(__dirname, '..', '..', '..', 'node_modules', 'immutable'),
-    'react-intl': path.resolve(__dirname, '..', '..', '..', 'node_modules', 'react-intl'),
-    'react': path.resolve(__dirname, '..', '..', '..', 'node_modules', 'react'),
-    'react-dom': path.resolve(__dirname, '..', '..', '..', 'node_modules', 'react-dom'),
-    'react-transition-group': path.resolve(__dirname, '..', '..', '..', 'node_modules', 'react-transition-group')
+    'babel-polyfill': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'babel-polyfill'),
+    'lodash': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'lodash'),
+    'immutable': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'immutable'),
+    'react-intl': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'react-intl'),
+    'react': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'react'),
+    'react-dom': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'react-dom'),
+    'react-transition-group': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'react-transition-group'),
+    'reactstrap': path.resolve(rootAdminpath, 'node_modules', 'strapi-helper-plugin', 'node_modules', 'reactstrap')
   },
 
   devtool: 'cheap-module-source-map',

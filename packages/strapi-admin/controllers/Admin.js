@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const exec = require('child_process').execSync;
 
@@ -9,37 +8,31 @@ const exec = require('child_process').execSync;
  */
 
 module.exports = {
-
-  index: async(ctx) => {
+  getCurrentEnvironment: async ctx => {
     try {
-      // Send the HTML file with injected scripts
-      ctx.body = strapi.admin.services.admin.generateAdminIndexFile();
-    } catch (err) {
-      ctx.body = err;
+      ctx.send({ currentEnvironment: strapi.app.env });
+    } catch(err) {
+      ctx.badRequest(null, [{ messages: [{ id: 'An error occured' }] }]);
     }
   },
 
-  pluginFile: async (ctx, next) => {
+  installPlugin: async ctx => {
     try {
-      // Will be served through the public middleware
-      if (ctx.params.plugin === 'plugins') {
-        return await next();
-      }
+      const { plugin, port } = ctx.request.body;
+      const strapiBin = path.join(process.cwd(), 'node_modules', 'strapi', 'bin', 'strapi');
 
-      const file = fs.readFileSync(path.resolve(process.cwd(), 'plugins', ctx.params.plugin, 'admin', 'build', `${ctx.params.file}`));
-      ctx.body = file;
-    } catch (err) {
-      ctx.body = ctx.notFound();
-    }
-  },
+      strapi.reload.isWatching = false;
 
-  file: async ctx => {
-    try {
-      const file = fs.readFileSync(path.resolve(__dirname, '..', 'admin', 'build', ctx.params.file));
-      ctx.body = file;
-    } catch (err) {
-      // Fallback, render admin page
-      ctx.body = strapi.admin.services.admin.generateAdminIndexFile();
+      strapi.log.info(`Installing ${plugin}...`);
+
+      exec(`node ${strapiBin} install ${plugin} ${port === '4000' ? '--dev' : ''}`);
+
+      ctx.send({ ok: true });
+
+      strapi.reload();
+    } catch(err) {
+      strapi.reload.isWatching = true;
+      ctx.badRequest(null, [{ messages: [{ id: 'An error occured' }] }]);
     }
   },
 

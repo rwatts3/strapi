@@ -8,41 +8,44 @@ const _ = require('lodash');
 
 module.exports = {
   models: async ctx => {
-    ctx.body = _.mapValues(strapi.models, model =>
-      _.pick(model, [
-        'info',
-        'connection',
-        'collectionName',
-        'attributes',
-        'identity',
-        'globalId',
-        'globalName',
-        'orm',
-        'loadedModel',
-        'primaryKey',
-        'associations'
-      ])
-    );
+    const pickData = (model) => _.pick(model, [
+      'info',
+      'connection',
+      'collectionName',
+      'attributes',
+      'identity',
+      'globalId',
+      'globalName',
+      'orm',
+      'loadedModel',
+      'primaryKey',
+      'associations'
+    ]);
+
+    const models = _.mapValues(strapi.models, pickData);
+    delete models['core_store'];
+
+    ctx.body = {
+      models,
+      plugins: Object.keys(strapi.plugins).reduce((acc, current) => {
+        acc[current] = {
+          models: _.mapValues(strapi.plugins[current].models, pickData)
+        };
+
+        return acc;
+      }, {})
+    };
   },
 
   find: async ctx => {
-    const { limit, skip = 0, sort, query, queryAttribute } = ctx.request.query;
-
-    // Find entries using `queries` system
-    const entries = await strapi.query(ctx.params.model).find({
-        limit,
-        skip,
-        sort,
-        query,
-        queryAttribute
-      });
-
-    ctx.body = entries;
+    ctx.body = await strapi.plugins['content-manager'].services['contentmanager'].fetchAll(ctx.params, ctx.request.query);
   },
 
   count: async ctx => {
+    const { source } = ctx.request.query;
+
     // Count using `queries` system
-    const count = await strapi.query(ctx.params.model).count();
+    const count = await strapi.plugins['content-manager'].services['contentmanager'].count(ctx.params, source);
 
     ctx.body = {
       count: _.isNumber(count) ? count : _.toNumber(count)
@@ -50,10 +53,10 @@ module.exports = {
   },
 
   findOne: async ctx => {
+    const { source } = ctx.request.query;
+
     // Find an entry using `queries` system
-    const entry = await strapi.query(ctx.params.model).findOne({
-      id: ctx.params.id
-    });
+    const entry = await strapi.plugins['content-manager'].services['contentmanager'].fetch(ctx.params, source);
 
     // Entry not found
     if (!entry) {
@@ -64,52 +67,31 @@ module.exports = {
   },
 
   create: async ctx => {
-    // Create an entry using `queries` system
-    const entryCreated = await strapi.query(ctx.params.model).create({
-      values: ctx.request.body
-    });
+    const { source } = ctx.request.query;
 
-    ctx.body = entryCreated;
+    try {
+      // Create an entry using `queries` system
+      ctx.body = await strapi.plugins['content-manager'].services['contentmanager'].add(ctx.params, ctx.request.body, source);
+    } catch(error) {
+      strapi.log.error(error);
+      ctx.badRequest(null, ctx.request.admin ? [{ messages: [{ id: error.message, field: error.field }] }] : error.message);
+    }
   },
 
   update: async ctx => {
-    // Add current model to the flow of updates.
-    const entry = strapi.query(ctx.params.model).update({
-      id: ctx.params.id,
-      values: ctx.request.body
-    });
+    const { source } = ctx.request.query;
 
-    // Return the last one which is the current model.
-    ctx.body = entry;
+    try {
+      // Return the last one which is the current model.
+      ctx.body = await strapi.plugins['content-manager'].services['contentmanager'].edit(ctx.params, ctx.request.body, source);
+    } catch(error) {
+      // TODO handle error update
+      strapi.log.error(error);
+      ctx.badRequest(null, ctx.request.admin ? [{ messages: [{ id: error.message, field: error.field }] }] : error.message);
+    }
   },
 
   delete: async ctx => {
-    const params = ctx.params;
-    const response = await strapi.query(params.model).findOne({
-      id: params.id
-    });
-
-    params.values = Object.keys(JSON.parse(JSON.stringify(response))).reduce((acc, current) => {
-      const association = strapi.models[params.model].associations.filter(x => x.alias === current)[0];
-
-      // Remove relationships.
-      if (association) {
-        acc[current] = _.isArray(response[current]) ? [] : null;
-      }
-
-      return acc;
-    }, {});
-
-    if (!_.isEmpty(params.values)) {
-      // Run update to remove all relationships.
-      await strapi.query(params.model).update(params);
-    }
-
-    // Delete an entry using `queries` system
-    const entryDeleted = await strapi.query(params.model).delete({
-      id: params.id
-    });
-
-    ctx.body = entryDeleted;
+    ctx.body = await strapi.plugins['content-manager'].services['contentmanager'].delete(ctx.params, ctx.request.query);
   },
 };

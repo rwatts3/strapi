@@ -9,6 +9,7 @@ const path = require('path');
 
 // Local dependencies.
 const packageJSON = require('../json/package.json.js');
+const database = require('../json/database.json.js');
 
 /**
  * Copy required files for the generated application
@@ -29,12 +30,19 @@ module.exports = {
       jsonfile: packageJSON
     },
 
+    'config/environments/development/database.json': {
+      jsonfile: database
+    },
+
     // Copy dot files.
     '.editorconfig': {
       copy: 'editorconfig'
     },
     '.npmignore': {
       copy: 'npmignore'
+    },
+    '.gitignore': {
+      copy: 'gitignore'
     },
 
     // Copy Markdown files with some information.
@@ -57,8 +65,8 @@ module.exports = {
       folder: {}
     },
 
-    // Empty node_modules directory.
-    'node_modules': {
+    // Empty public directory.
+    'public/uploads': {
       folder: {}
     }
   }

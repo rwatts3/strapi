@@ -28,6 +28,10 @@
 We've been working on a major update to Strapi for several months now, rewriting the core framework and the administration panel. Performances has been increased, Developer eXperience has been improved and a brand new plugins
 ecosystem has been introduced. **Both versions are available, we still recommend you to use v1 for production usage.**.
 
+<a href="https://heroku.com/deploy?template=https://github.com/strapi/strapi-heroku-app">
+  <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy">
+</a>
+
 #### Alpha
 
 The alpha has support for the latest version of Node.js (v8) and npm (v5).
@@ -41,7 +45,7 @@ This is the production-ready version of Strapi (v1). You should also consider th
 npm install strapi -g
 ```
 
-Read the [Getting started](http://strapi.io/documentation/getting-started/quick-start.html) page to create your first project using Strapi.
+Read the [Getting started](https://strapi.io/getting-started) page to create your first project using Strapi.
 
 ## Features
 
@@ -56,7 +60,7 @@ Read the [Getting started](http://strapi.io/documentation/getting-started/quick-
 
 ## Philosophy ?
 
-> At [Strapi](http://strapi.io), everything we do we believe in changing the status quo of web development. Our products are simple to use, user friendly and production-ready.
+> At [Strapi](https://strapi.io), everything we do we believe in changing the status quo of web development. Our products are simple to use, user friendly and production-ready.
 
 Web and mobile applications needed a powerful, simple to use and production-ready API-driven solution. That's why we created Strapi, an open-source Content Management Framework (CMF) for exposing your content (data, media) accross multi-devices.
 
@@ -78,8 +82,12 @@ For general help using Strapi, please refer to [the official Strapi documentatio
 
 ### Professional support
 
-[Strapi Solutions](http://strapi.io), the company behind Strapi, provides a full range of solutions to get better results, faster. We're always looking for the next challenge: coaching, consulting, training, customization, etc. [Drop us an email](mailto:support@strapi.io) to see how we can help you.
+[Strapi Solutions](https://strapi.io), the company behind Strapi, provides a full range of solutions to get better results, faster. We're always looking for the next challenge: coaching, consulting, training, customization, etc. [Drop us an email](mailto:support@strapi.io) to see how we can help you.
+
+### Migration
+
+Follow our [migration guides](https://strapi.io/documentation/migration/migration-guide.html) on the website to keep your Strapi projects updated.
 
 ## License
 
-[MIT License](LICENSE.md) Copyright (c) 2015-2017 [Strapi Solutions](http://strapi.io/).
+[MIT License](LICENSE.md) Copyright (c) 2015-2018 [Strapi Solutions](https://strapi.io/).

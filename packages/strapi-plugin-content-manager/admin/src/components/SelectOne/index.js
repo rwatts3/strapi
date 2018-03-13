@@ -8,7 +8,7 @@ import React from 'react';
 import Select from 'react-select';
 import PropTypes from 'prop-types';
 import 'react-select/dist/react-select.css';
-import { map, isArray, isNull, isUndefined } from 'lodash';
+import { map, isArray, isNull, isUndefined, isFunction, get } from 'lodash';
 
 import request from 'utils/request';
 import templateObject from 'utils/templateObject';
@@ -27,6 +27,7 @@ class SelectOne extends React.Component { // eslint-disable-line react/prefer-st
   getOptions = (query) => {
     const params = {
       limit: 20,
+      source: this.props.relation.plugin || 'content-manager',
     };
 
     // Set `query` parameter if necessary
@@ -58,12 +59,20 @@ class SelectOne extends React.Component { // eslint-disable-line react/prefer-st
         return {options};
       })
       .catch(() => {
-        window.Strapi.notification.error('An error occurred during relationship fetch.');
+        strapi.notification.error('content-manager.notification.relationship.fetch');
       });
   }
 
   handleChange = (value) => {
-    this.props.setRecordAttribute(this.props.relation.alias, value);
+    const target = {
+      name: `record.${this.props.relation.alias}`,
+      value,
+      type: 'select',
+    };
+
+    this.props.setRecordAttribute({ target });
+    // NOTE: keep this line if we rollback to the old container
+    // this.props.setRecordAttribute(this.props.relation.alias, value);
   }
 
   render() {
@@ -71,8 +80,10 @@ class SelectOne extends React.Component { // eslint-disable-line react/prefer-st
       ? <p>{this.props.relation.description}</p>
       : '';
 
-    const value = this.props.record.get(this.props.relation.alias);
-    
+    const value = get(this.props.record, this.props.relation.alias);
+    // NOTE: keep this line if we rollback to the old container
+    // const value = this.props.record.get(this.props.relation.alias);
+
     /* eslint-disable jsx-a11y/label-has-for */
     return (
       <div className={`form-group ${styles.selectOne}`}>
@@ -83,8 +94,8 @@ class SelectOne extends React.Component { // eslint-disable-line react/prefer-st
           loadOptions={this.getOptions}
           simpleValue
           value={isNull(value) || isUndefined(value) ? null : {
-            value: value.toJS(),
-            label: templateObject({ mainField: this.props.relation.displayedAttribute }, value.toJS()).mainField || value.toJS().id,
+            value: isFunction(value.toJS) ? value.toJS() : value,
+            label: templateObject({ mainField: this.props.relation.displayedAttribute }, isFunction(value.toJS) ? value.toJS() : value).mainField || (isFunction(value.toJS) ? get(value.toJS(), 'id') : get(value, 'id')),
           }}
         />
       </div>

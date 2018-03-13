@@ -54,10 +54,10 @@ export function* editContentType(action) {
         leftMenuContentTypes[0].links = sortBy(leftMenuContentTypes[0].links, 'label');
         action.context.updatePlugin('content-manager', 'leftMenuSections', leftMenuContentTypes);
       }
-      window.Strapi.notification.success('content-type-builder.notification.success.message.contentType.edit');
+      strapi.notification.success('content-type-builder.notification.success.message.contentType.edit');
     }
   } catch(error) {
-    window.Strapi.notification.error(error);
+    strapi.notification.error(get(error, ['response', 'payload', 'message'], 'notification.error'));
   }
 }
 
@@ -69,21 +69,26 @@ export function* fetchConnections() {
     yield put(connectionsFetchSucceeded(data));
 
   } catch(error) {
-    window.Strapi.notification.error('content-type-builder.notification.error.message');
+    strapi.notification.error('content-type-builder.notification.error.message');
   }
 }
 
 export function* fetchContentType(action) {
   try {
+    const requestUrl = `/content-type-builder/models/${action.contentTypeName.split('&source=')[0]}`;
+    const params = {};
+    const source = action.contentTypeName.split('&source=')[1];
 
-    const requestUrl = `/content-type-builder/models/${action.contentTypeName}`;
+    if (source) {
+      params.source = source;
+    }
 
-    const data = yield call(request, requestUrl, { method: 'GET' });
+    const data = yield call(request, requestUrl, { method: 'GET', params });
 
     yield put(contentTypeFetchSucceeded(data));
 
   } catch(error) {
-    window.Strapi.notification.error('content-type-builder.notification.error.message');
+    strapi.notification.error('content-type-builder.notification.error.message');
   }
 }
 

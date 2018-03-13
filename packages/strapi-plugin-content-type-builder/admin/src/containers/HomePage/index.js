@@ -44,7 +44,7 @@ export class HomePage extends React.Component { // eslint-disable-line react/pre
 
   handleButtonClick = () => {
     if (storeData.getIsModelTemporary()) {
-      window.Strapi.notification.info('content-type-builder.notification.info.contentType.creating.notSaved');
+      strapi.notification.info('content-type-builder.notification.info.contentType.creating.notSaved');
     } else {
       this.toggleModal();
     }
@@ -69,8 +69,8 @@ export class HomePage extends React.Component { // eslint-disable-line react/pre
         title={title}
         buttonLabel={'content-type-builder.button.contentType.add'}
         onButtonClick={this.handleButtonClick}
-        rowItems={this.props.models}
         onHandleDelete={this.handleDelete}
+        rowItems={this.props.models}
       />
     );
   }

@@ -35,8 +35,8 @@ module.exports = (scope, cb) => {
 
   const availableDependencies = [];
   const dependencies = _.get(packageJSON, 'dependencies');
-  const strapiDependencies = Object.keys(dependencies).filter(key => key.indexOf('strapi') !== -1);
-  const othersDependencies = Object.keys(dependencies).filter(key => key.indexOf('strapi') === -1);
+  const strapiDependencies = Object.keys(dependencies).filter(key => key.indexOf('strapi') !== -1 && key.indexOf('strapi-bookshelf') === -1);
+  const othersDependencies = Object.keys(dependencies).filter(key => key.indexOf('strapi') === -1  || key.indexOf('strapi-bookshelf') !== -1);
 
   // Verify if the dependencies are available into the global
   _.forEach(strapiDependencies, (key) => {
@@ -83,15 +83,36 @@ module.exports = (scope, cb) => {
   // Install default plugins and link dependencies.
   function pluginsInstallation() {
     // Define the list of default plugins.
-    const defaultPlugins = ['settings-manager', 'content-type-builder', 'content-manager'];
+    const defaultPlugins = [{
+      name: 'settings-manager',
+      core: true
+    }, {
+      name: 'content-type-builder',
+      core: true
+    }, {
+      name: 'content-manager',
+      core: true
+    }, {
+      name: 'users-permissions',
+      core: true
+    }, {
+      name: 'email',
+      core: true
+    },{
+      name: 'upload',
+      core: true
+    }, {
+      name: 'analytics',
+      core: false
+    }];
 
     // Install each plugin.
     defaultPlugins.forEach(defaultPlugin => {
       try {
-        execSync(`node ${strapiBin} install ${defaultPlugin} ${scope.developerMode ? '--dev' : ''}`);
-        logger.info(`The plugin ${defaultPlugin} has been successfully installed.`);
+        execSync(`node ${strapiBin} install ${defaultPlugin.name} ${scope.developerMode && defaultPlugin.core ? '--dev' : ''}`);
+        logger.info(`The plugin ${defaultPlugin.name} has been successfully installed.`);
       } catch (error) {
-        logger.error(`An error occurred during ${defaultPlugin} plugin installation.`);
+        logger.error(`An error occurred during ${defaultPlugin.name} plugin installation.`);
         logger.error(error);
       }
     });
@@ -101,9 +122,19 @@ module.exports = (scope, cb) => {
       logger.info(`Linking \`${dependency.key}\` dependency to the project...`);
 
       if (dependency.global) {
-        fs.symlinkSync(dependency.path, path.resolve(scope.rootPath, 'node_modules', dependency.key), 'dir');
+        try {
+          fs.accessSync(dependency.path, fs.constants.W_OK | fs.constants.F_OK);
+          fs.symlinkSync(dependency.path, path.resolve(scope.rootPath, 'node_modules', dependency.key), 'dir');
+        } catch (e) {
+          // Silent.
+        }
       } else {
-        fs.symlinkSync(path.resolve(scope.strapiRoot, 'node_modules', dependency.key), path.resolve(scope.rootPath, 'node_modules', dependency.key), 'dir');
+        try {
+          fs.accessSync(path.resolve(scope.strapiRoot, 'node_modules', dependency.key), fs.constants.W_OK | fs.constants.F_OK);
+          fs.symlinkSync(path.resolve(scope.strapiRoot, 'node_modules', dependency.key), path.resolve(scope.rootPath, 'node_modules', dependency.key), 'dir');
+        } catch (e) {
+          // Silent.
+        }
       }
     });
 

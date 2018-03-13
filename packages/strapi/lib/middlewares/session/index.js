@@ -17,29 +17,6 @@ const _ = require('lodash');
 module.exports = strapi => {
   const hook = {
     /**
-     * Default options
-     */
-
-    defaults: {
-      session: {
-        enabled: true,
-        client: 'cookie',
-        key: 'strapi.sid',
-        prefix: 'strapi:sess:',
-        ttl: 24 * 60 * 60 * 1000, // One day in ms
-        rolling: false,
-        secretKeys: ['mySecretKey1', 'mySecretKey2'],
-        cookie: {
-          path: '/',
-          httpOnly: true,
-          maxAge: 24 * 60 * 60 * 1000, // One day in ms
-          rewrite: true,
-          signed: false
-        }
-      }
-    },
-
-    /**
      * Initialize the hook
      */
 
@@ -68,9 +45,7 @@ module.exports = strapi => {
             );
 
             strapi.app.use(
-              strapi.koaMiddlewares.convert(
-                strapi.koaMiddlewares.session(options, strapi.app)
-              )
+              strapi.koaMiddlewares.session(options, strapi.app)
             );
             strapi.app.use((ctx, next) => {
               ctx.state = ctx.state || {};
@@ -94,9 +69,7 @@ module.exports = strapi => {
           );
 
           strapi.app.use(
-            strapi.koaMiddlewares.convert(
-              strapi.koaMiddlewares.session(options, strapi.app)
-            )
+            strapi.koaMiddlewares.session(options, strapi.app)
           );
           strapi.app.use((ctx, next) => {
             ctx.state = ctx.state || {};

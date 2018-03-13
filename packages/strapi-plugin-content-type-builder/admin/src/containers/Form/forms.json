@@ -3,7 +3,9 @@
     "baseSettings": {
       "items": [
         {
-          "label": "content-type-builder.form.contentType.item.connections",
+          "label": {
+            "id": "content-type-builder.form.contentType.item.connections"
+          },
           "name": "connection",
           "type": "select",
           "value": "default",
@@ -13,21 +15,40 @@
           }
         },
         {
-          "label": "content-type-builder.form.contentType.item.name",
+          "label": {
+            "id": "content-type-builder.form.contentType.item.name"
+          },
           "name": "name",
           "value": "",
           "type": "string",
           "validations": {
             "required": true
           },
-          "inputDescription": "content-type-builder.form.contentType.item.name.description",
-          "linkContent": {
-            "description": "content-type-builder.form.contentType.item.name.link.description",
-            "link": "https://v3.strapi.io/documentation/concepts/concepts.html#models"
+          "inputDescription": {
+            "id": "content-type-builder.form.contentType.item.name.description",
+            "params": {
+              "link": {
+                "parent": {
+                  "type": "a",
+                  "attr": {
+                    "href": "https://v3.strapi.io/documentation/concepts/concepts.html#models",
+                    "target": "_blank"
+                  }
+                },
+                "children": {
+                  "type": "FormattedMessage",
+                  "attr": {
+                    "id": "content-type-builder.form.contentType.item.name.link.description"
+                  }
+                }
+              }
+            }
           }
         },
         {
-          "label": "content-type-builder.form.contentType.item.description",
+          "label": {
+            "id": "content-type-builder.form.contentType.item.description"
+          },
           "name": "description",
           "value": "",
           "type": "textarea",
@@ -39,12 +60,16 @@
     "advancedSettings": {
       "items": [
         {
-          "label": "content-type-builder.form.contentType.item.collectionName",
+          "label": {
+            "id": "content-type-builder.form.contentType.item.collectionName"
+          },
           "name": "collectionName",
           "type": "string",
           "value": "",
           "validations": {},
-          "inputDescription": "content-type-builder.form.contentType.item.collectionName.inputDescription"
+          "inputDescription": {
+            "id": "content-type-builder.form.contentType.item.collectionName.inputDescription"
+          }
         }
       ]
     }
@@ -76,6 +101,18 @@
         "description": "content-type-builder.popUpForm.attributes.json.description"
       },
       {
+        "type": "email",
+        "description": "content-type-builder.popUpForm.attributes.email.description"
+      },
+      {
+        "type": "password",
+        "description": "content-type-builder.popUpForm.attributes.password.description"
+      },
+      {
+        "type": "media",
+        "description": "content-type-builder.popUpForm.attributes.media.description"
+      },
+      {
         "type": "relation",
         "description": "content-type-builder.popUpForm.attributes.relation.description"
       }
@@ -86,7 +123,9 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.textarea.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.textarea.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -99,24 +138,36 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.minimumLength",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.minimumLength"
+            },
             "name": "params.minLength",
             "type": "checkbox",
             "value": false,
@@ -134,7 +185,9 @@
             ]
           },
           {
-            "label": "content-type-builder.form.attribute.item.maximumLength",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.maximumLength"
+            },
             "name": "params.maxLength",
             "type": "checkbox",
             "value": false,
@@ -158,7 +211,9 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.number.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.number.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -167,7 +222,9 @@
             }
           },
           {
-            "label": "content-type-builder.form.attribute.item.number.type",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.number.type"
+            },
             "name": "params.type",
             "type": "select",
             "value": "integer",
@@ -185,24 +242,36 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.minimum",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.minimum"
+            },
             "name": "params.min",
             "type": "checkbox",
             "value": false,
@@ -220,7 +289,9 @@
             ]
           },
           {
-            "label": "content-type-builder.form.attribute.item.maximum",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.maximum"
+            },
             "name": "params.max",
             "type": "checkbox",
             "value": false,
@@ -244,7 +315,9 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.string.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.string.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -257,24 +330,36 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.minimumLength",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.minimumLength"
+            },
             "name": "params.minLength",
             "type": "checkbox",
             "value": false,
@@ -292,7 +377,173 @@
             ]
           },
           {
-            "label": "content-type-builder.form.attribute.item.maximumLength",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.maximumLength"
+            },
+            "name": "params.maxLength",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "items": [
+              {
+                "label": "",
+                "name": "params.maxLengthValue",
+                "value": "",
+                "type": "number",
+                "validations": {
+                  "required": true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "email": {
+      "baseSettings": {
+        "items": [
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.string.name"
+            },
+            "name": "name",
+            "type": "string",
+            "value": "",
+            "validations": {
+              "required": true
+            }
+          }
+        ]
+      },
+      "advancedSettings": {
+        "items": [
+          {
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
+            "name": "params.required",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
+          },
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
+            "name": "params.unique",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
+          },
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.minimumLength"
+            },
+            "name": "params.minLength",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "items": [
+              {
+                "label": "",
+                "name": "params.minLengthValue",
+                "value": "",
+                "type": "number",
+                "validations": {
+                  "required": true
+                }
+              }
+            ]
+          },
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.maximumLength"
+            },
+            "name": "params.maxLength",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "items": [
+              {
+                "label": "",
+                "name": "params.maxLengthValue",
+                "value": "",
+                "type": "number",
+                "validations": {
+                  "required": true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "password": {
+      "baseSettings": {
+        "items": [
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.string.name"
+            },
+            "name": "name",
+            "type": "string",
+            "value": "",
+            "validations": {
+              "required": true
+            }
+          }
+        ]
+      },
+      "advancedSettings": {
+        "items": [
+          {
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
+            "name": "params.required",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
+          },
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.minimumLength"
+            },
+            "name": "params.minLength",
+            "type": "checkbox",
+            "value": false,
+            "validations": {},
+            "items": [
+              {
+                "label": "",
+                "name": "params.minLengthValue",
+                "value": "",
+                "type": "number",
+                "validations": {
+                  "required": true
+                }
+              }
+            ]
+          },
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.maximumLength"
+            },
             "name": "params.maxLength",
             "type": "checkbox",
             "value": false,
@@ -316,7 +567,9 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.date.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.date.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -329,21 +582,31 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           }
         ]
       }
@@ -352,7 +615,9 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.boolean.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.boolean.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -365,21 +630,31 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           }
         ]
       }
@@ -388,7 +663,9 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.json.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.json.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -401,21 +678,31 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           }
         ]
       }
@@ -424,10 +711,23 @@
       "baseSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.media.name",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.media.name"
+            },
             "name": "name",
             "type": "string",
             "value": "",
+            "validations": {
+              "required": true
+            }
+          },
+          {
+            "label": {
+              "id": "content-type-builder.form.attribute.item.media.multiple"
+            },
+            "name": "params.multiple",
+            "type": "checkbox",
+            "value": false,
             "validations": {
               "required": true
             }
@@ -437,21 +737,31 @@
       "advancedSettings": {
         "items": [
           {
-            "title": "content-type-builder.form.attribute.item.settings.name",
-            "label": "content-type-builder.form.attribute.item.requiredField",
+            "title": {
+              "id": "content-type-builder.form.attribute.item.settings.name"
+            },
+            "label": {
+              "id": "content-type-builder.form.attribute.item.requiredField"
+            },
             "name": "params.required",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.requiredField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.requiredField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           }
         ]
       }
@@ -460,7 +770,9 @@
       "defineRelation": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.defineRelation.fieldName",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.defineRelation.fieldName"
+            },
             "name": "name",
             "type": "string",
             "value": "",
@@ -470,7 +782,9 @@
             }
           },
           {
-            "label": "content-type-builder.form.attribute.item.defineRelation.fieldName",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.defineRelation.fieldName"
+            },
             "name": "params.key",
             "type": "string",
             "value": "",
@@ -484,20 +798,28 @@
       "advancedSettings": {
         "items": [
           {
-            "label": "content-type-builder.form.attribute.item.uniqueField",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.uniqueField"
+            },
             "name": "params.unique",
             "type": "checkbox",
             "value": false,
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.uniqueField.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.uniqueField.description"
+            }
           },
           {
-            "label": "content-type-builder.form.attribute.item.customColumnName",
+            "label": {
+              "id": "content-type-builder.form.attribute.item.customColumnName"
+            },
             "name": "params.columnName",
             "type": "string",
             "value": "",
             "validations": {},
-            "inputDescription": "content-type-builder.form.attribute.item.customColumnName.description"
+            "inputDescription": {
+              "id": "content-type-builder.form.attribute.item.customColumnName.description"
+            }
           },
           {
             "label": "",

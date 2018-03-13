@@ -1,5 +1,6 @@
-import { map } from 'lodash';
-import { fork, put, select, call, takeLatest } from 'redux-saga/effects';
+import { LOCATION_CHANGE } from 'react-router-redux';
+import { map, omit } from 'lodash';
+import { fork, put, select, call, takeLatest, take, cancel } from 'redux-saga/effects';
 
 import request from 'utils/request';
 import { generateSchema } from 'utils/schema';
@@ -10,45 +11,45 @@ import { makeSelectModels } from './selectors';
 
 export function* modelEntriesGet(action) {
   try {
-    const requestUrl = `${window.Strapi.apiUrl}/content-manager/explorer/${action.modelName}/count`;
+    const requestUrl = `/content-manager/explorer/${action.modelName}/count${action.source !== undefined ? `?source=${action.source}`: ''}`;
+
     const response = yield call(request, requestUrl, { method: 'GET' });
 
     yield put(getModelEntriesSucceeded(response.count));
   } catch(error) {
-    window.Strapi.notification.error('content-manager.error.model.fetch');
+    strapi.notification.error('content-manager.error.model.fetch');
   }
 }
 
 export const generateMenu = function () {
-  return request(`${window.Strapi.apiUrl}/content-manager/models`, {
+  return request(`/content-manager/models`, {
     method: 'GET',
   })
     .then(response => generateSchema(response))
     .then(displayedModels => {
       return [{
         name: 'Content Types',
-        links: map(displayedModels, (model, key) => ({
+        links: map(omit(displayedModels, 'plugins'), (model, key) => ({
           label: model.labelPlural || model.label || key,
           destination: key,
         })),
       }];
     })
     .catch((error) => {
-      window.Strapi.notification.error('content-manager.error.model.fetch');
+      strapi.notification.error('content-manager.error.model.fetch');
       throw Error(error);
     });
 };
 
 export function* getModels() {
   try {
-    const response = yield call(request,
-      `${window.Strapi.apiUrl}/content-manager/models`, {
-        method: 'GET',
-      });
+    const response = yield call(request, `/content-manager/models`, {
+      method: 'GET',
+    });
 
     yield put(loadedModels(response));
   } catch (err) {
-    window.Strapi.notification.error('content-manager.error.model.fetch');
+    strapi.notification.error('content-manager.error.model.fetch');
   }
 }
 
@@ -59,7 +60,7 @@ export function* modelsLoaded() {
   try {
     schema = generateSchema(models);
   } catch (err) {
-    window.Strapi.notification.error('content-manager.error.schema.generation');
+    strapi.notification.error('content-manager.error.schema.generation');
     throw new Error(err);
   }
 
@@ -68,9 +69,15 @@ export function* modelsLoaded() {
 
 // Individual exports for testing
 export function* defaultSaga() {
-  yield fork(takeLatest, LOAD_MODELS, getModels);
-  yield fork(takeLatest, LOADED_MODELS, modelsLoaded);
-  yield fork(takeLatest, GET_MODEL_ENTRIES, modelEntriesGet);
+  const loadModelsWatcher = yield fork(takeLatest, LOAD_MODELS, getModels);
+  const loadedModelsWatcher = yield fork(takeLatest, LOADED_MODELS, modelsLoaded);
+  const loadEntriesWatcher = yield fork(takeLatest, GET_MODEL_ENTRIES, modelEntriesGet);
+
+  yield take(LOCATION_CHANGE);
+
+  yield cancel(loadModelsWatcher);
+  yield cancel(loadedModelsWatcher);
+  yield cancel(loadEntriesWatcher);
 }
 
 // All sagas to be loaded

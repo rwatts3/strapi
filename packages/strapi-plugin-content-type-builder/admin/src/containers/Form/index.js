@@ -14,6 +14,7 @@ import {
   findIndex,
   filter,
   get,
+  has,
   includes,
   isEmpty,
   isUndefined,
@@ -254,6 +255,7 @@ export class Form extends React.Component { // eslint-disable-line react/prefer-
       this.props.contentTypeCreate(contentType);
     }
 
+    this.setState({ showModal: false });
     return this.props.contentTypeEdit(this.context);
   }
 
@@ -454,16 +456,27 @@ export class Form extends React.Component { // eslint-disable-line react/prefer-
     }
   }
 
-  renderModalBodyChooseAttributes = () => (
-    map(forms.attributesDisplay.items, (attribute, key) => (
-      <AttributeCard
-        key={key}
-        attribute={attribute}
-        routePath={this.props.routePath}
-        handleClick={this.goToAttributeTypeView}
-      />
-    ))
-  )
+  renderModalBodyChooseAttributes = () => {
+    const attributesDisplay = forms.attributesDisplay.items;
+
+    // Don't display the media field if the upload plugin isn't installed
+    if (!has(this.context.plugins.toJS(), 'upload')) {
+      attributesDisplay.splice(8, 1);
+    }
+
+    return (
+      map(attributesDisplay, (attribute, key) => (
+        <AttributeCard
+          key={key}
+          attribute={attribute}
+          autoFocus={key === 0}
+          routePath={this.props.routePath}
+          handleClick={this.goToAttributeTypeView}
+          tabIndex={key}
+        />
+      ))
+    );
+  }
 
   testContentType = (contentTypeName, cbSuccess, successData, cbFail, failData) => {
     // Check if the content type is in the localStorage (not saved) to prevent request error
@@ -530,6 +543,9 @@ export class Form extends React.Component { // eslint-disable-line react/prefer-
     const selectOptions = includes(this.props.hash, 'attributenumber') ? get(this.props.form, ['items', '1', 'items']) : this.props.selectOptions;
 
     if (includes(popUpFormType, 'relation')) {
+      const contentType = this.props.modelName.split('&source=');
+      const contentTypeIndex = contentType.length === 2 ? { name: contentType[0], source: contentType[1] } : { name: contentType[0] };
+
       return (
         <PopUpRelations
           isOpen={this.state.showModal}
@@ -537,7 +553,7 @@ export class Form extends React.Component { // eslint-disable-line react/prefer-
           renderCustomPopUpHeader={renderCustomPopUpHeader}
           popUpTitle={popUpTitle}
           routePath={`${this.props.routePath}/${this.props.hash}`}
-          contentType={get(dropDownItems, [findIndex(dropDownItems, ['name', this.props.modelName])])}
+          contentType={get(dropDownItems, [findIndex(dropDownItems, contentTypeIndex)])}
           form={this.props.form}
           showRelation={includes(this.props.hash, 'defineRelation')}
           onChange={this.handleChange}

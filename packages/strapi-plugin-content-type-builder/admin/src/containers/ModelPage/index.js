@@ -8,7 +8,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { createStructuredSelector } from 'reselect';
 import { bindActionCreators, compose } from 'redux';
-import { get, has, size, replace, startCase, findIndex } from 'lodash';
+import { get, has, includes, isEmpty, size, replace, startCase, findIndex } from 'lodash';
 import { FormattedMessage } from 'react-intl';
 import { NavLink } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -76,8 +76,6 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
     if (this.props.updatedContentType !== nextProps.updatedContentType) {
       if (this.state.contentTypeTemporary && storeData.getContentType()) {
         this.props.modelFetchSucceeded({ model: storeData.getContentType() });
-      } else {
-        this.fetchModel(nextProps);
       }
     }
 
@@ -85,6 +83,25 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
       this.props.checkIfTableExists();
     }
   }
+
+  // componentWillUpdate(nextProps) {
+  //   if (!isEmpty(nextProps.menu)) {
+  //     const allowedPaths = nextProps.menu.reduce((acc, current) => {
+  //       const models = current.items.reduce((acc, current) => {
+  //         acc.push(current.name);
+  //
+  //         return acc;
+  //       }, []);
+  //       return acc.concat(models);
+  //     }, []);
+  //
+  //     const shouldRedirect = allowedPaths.filter(el => el === this.props.match.params.modelName.split('&')[0]).length === 0;
+  //
+  //     if (shouldRedirect) {
+  //       this.props.history.push('/404');
+  //     }
+  //   }
+  // }
 
   componentDidUpdate(prevProps) {
     if (prevProps.match.params.modelName !== this.props.match.params.modelName) {
@@ -135,7 +152,7 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
 
   handleAddLinkClick = () => {
     if (storeData.getIsModelTemporary()) {
-      window.Strapi.notification.info('content-type-builder.notification.info.contentType.creating.notSaved');
+      strapi.notification.info('content-type-builder.notification.info.contentType.creating.notSaved');
     } else {
       this.toggleModal();
     }
@@ -156,8 +173,12 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
   handleEditAttribute = (attributeName) => {
     const index = findIndex(this.props.modelPage.model.attributes, ['name', attributeName]);
     const attribute = this.props.modelPage.model.attributes[index];
-    const settingsType = attribute.params.type ? 'baseSettings' : 'defineRelation';
 
+    // Remove enumeration type because it's not supported by this plugin for the moment.
+    if (attribute.params.type === 'enumeration') {
+      return strapi.notification.info('content-type-builder.notification.info.enumeration');
+    }
+    const settingsType = attribute.params.type ? 'baseSettings' : 'defineRelation';
     const parallelAttributeIndex = findIndex(this.props.modelPage.model.attributes, ['name', attribute.params.key]);
     const hasParallelAttribute = settingsType === 'defineRelation' && parallelAttributeIndex !== -1 ? `::${parallelAttributeIndex}` : '';
 
@@ -169,6 +190,10 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
       case 'decimal':
         attributeType = 'number';
         break;
+      case 'email':
+      case 'password':
+        attributeType = 'string';
+        break;
       default:
         attributeType = attribute.params.type ? attribute.params.type : 'relation';
     }
@@ -177,7 +202,7 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
   }
 
   handleSubmit = () => {
-    this.props.submit(this.context);
+    this.props.submit(this.context, this.props.match.params.modelName);
   }
 
   toggleModal = () => {
@@ -199,21 +224,25 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
   renderCustomLi = (row, key) => <AttributeRow key={key} row={row} onEditAttribute={this.handleEditAttribute} onDelete={this.handleDelete} />
 
   renderCustomLink = (props, linkStyles) => {
-    if (props.link.name === 'button.contentType.add') return this.renderAddLink(props, linkStyles);
+    if (props.link.name === 'button.contentType.add') {
+      return this.renderAddLink(props, linkStyles);
+    }
 
-    const temporary = props.link.isTemporary || this.props.modelPage.showButtons && props.link.name === this.props.match.params.modelName ? <FormattedMessage id="content-type-builder.contentType.temporaryDisplay" /> : '';
-    const spanStyle = props.link.isTemporary || this.props.modelPage.showButtons && props.link.name === this.props.match.params.modelName ? styles.leftMenuSpan : '';
+    const linkName = props.link.source ?  `${props.link.name}&source=${props.link.source}` : props.link.name;
+    const temporary = props.link.isTemporary || this.props.modelPage.showButtons && linkName === this.props.match.params.modelName ? <FormattedMessage id="content-type-builder.contentType.temporaryDisplay" /> : '';
+    const spanStyle = props.link.isTemporary || this.props.modelPage.showButtons && linkName === this.props.match.params.modelName || isEmpty(temporary) && props.link.source ? styles.leftMenuSpan : '';
+    const pluginSource = isEmpty(temporary) && props.link.source ? <FormattedMessage id="content-type-builder.from">{(message) => <span style={{ marginRight: '10px' }}>({message}: {props.link.source})</span>}</FormattedMessage>: '';
 
     return (
       <li className={linkStyles.pluginLeftMenuLink}>
-        <NavLink className={linkStyles.link} to={`/plugins/content-type-builder/models/${props.link.name}`} activeClassName={linkStyles.linkActive}>
+        <NavLink className={linkStyles.link} to={`/plugins/content-type-builder/models/${props.link.name}${props.link.source ? `&source=${props.link.source}` : ''}`} activeClassName={linkStyles.linkActive}>
           <div>
             <i className={`fa fa-caret-square-o-right`} />
           </div>
           <div className={styles.contentContainer}>
 
             <span className={spanStyle}>{startCase(props.link.name)}</span>
-            <span style={{ marginLeft: '1rem', fontStyle: 'italic' }}>{temporary}</span>
+            <span style={{ marginLeft: '1rem', fontStyle: 'italic' }}>{temporary}{pluginSource}</span>
           </div>
         </NavLink>
       </li>
@@ -264,7 +293,7 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
         renderCustomLi={this.renderCustomLi}
         onButtonClick={this.handleClickAddAttribute}
       />;
-
+    const icoType = includes(this.props.match.params.modelName, '&source=') ? '' : 'pencil';
     return (
       <div className={styles.modelPage}>
         <div className="container-fluid">
@@ -280,7 +309,7 @@ export class ModelPage extends React.Component { // eslint-disable-line react/pr
                 <ContentHeader
                   name={this.props.modelPage.model.name}
                   description={contentHeaderDescription}
-                  icoType="pencil"
+                  icoType={icoType}
                   editIcon
                   editPath={`${redirectRoute}/${this.props.match.params.modelName}#edit${this.props.match.params.modelName}::contentType::baseSettings`}
                   addButtons={addButtons}
@@ -321,6 +350,7 @@ ModelPage.propTypes = {
   cancelChanges: PropTypes.func.isRequired,
   checkIfTableExists: PropTypes.func.isRequired,
   deleteAttribute: PropTypes.func.isRequired,
+  // history: PropTypes.object.isRequired,
   location: PropTypes.object.isRequired,
   match: PropTypes.object.isRequired,
   menu: PropTypes.array.isRequired,

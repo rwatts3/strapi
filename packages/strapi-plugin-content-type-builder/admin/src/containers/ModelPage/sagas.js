@@ -1,6 +1,7 @@
 import { LOCATION_CHANGE } from 'react-router-redux';
 import {
   capitalize,
+  cloneDeep,
   forEach,
   get,
   includes,
@@ -35,6 +36,7 @@ import { makeSelectModel } from './selectors';
 
 export function* getTableExistance() {
   try {
+    // TODO check table existance for plugin model
     const model = yield select(makeSelectModel());
     const modelName = !isEmpty(model.collectionName) ? model.collectionName : model.name;
     const requestUrl = `/content-type-builder/checkTableExists/${model.connection}/${modelName}`;
@@ -43,22 +45,28 @@ export function* getTableExistance() {
     yield put(checkIfTableExistsSucceeded(tableExists));
 
   } catch(error) {
-    window.Strapi.notification.error('An error occured');
+    strapi.notification.error('notification.error');
   }
 }
 
 export function* fetchModel(action) {
   try {
-    const requestUrl = `/content-type-builder/models/${action.modelName}`;
+    const requestUrl = `/content-type-builder/models/${action.modelName.split('&source=')[0]}`;
+    const params = {};
+    const source = action.modelName.split('&source=')[1];
 
-    const data = yield call(request, requestUrl, { method: 'GET' });
+    if (source) {
+      params.source = source;
+    }
+
+    const data = yield call(request, requestUrl, { method: 'GET', params });
 
     yield put(modelFetchSucceeded(data));
 
     yield put(unsetButtonLoader());
 
   } catch(error) {
-    window.Strapi.notification.error('An error occured');
+    strapi.notification.error('notification.error');
   }
 }
 
@@ -68,8 +76,8 @@ export function* submitChanges(action) {
     yield put(setButtonLoader());
 
     const modelName = get(storeData.getContentType(), 'name');
-
-    const body = yield select(makeSelectModel());
+    const data = yield select(makeSelectModel());
+    const body = cloneDeep(data);
 
     map(body.attributes, (attribute, index) => {
       // Remove the connection key from attributes
@@ -82,23 +90,33 @@ export function* submitChanges(action) {
           delete body.attributes[index].params.dominant;
         }
 
-        if (includes(key, 'Value')) {
+        if (includes(key, 'Value') && key !== 'pluginValue') {
           // Remove and set needed keys for params
           set(body.attributes[index].params, replace(key, 'Value', ''), value);
           unset(body.attributes[index].params, key);
         }
 
-        if (!value) {
+        if (key === 'pluginValue' && value) {
+          set(body.attributes[index].params, 'plugin', true);
+        }
+
+        if (!value && key !== 'multiple') {
           const paramsKey = includes(key, 'Value') ? replace(key,'Value', '') : key;
           unset(body.attributes[index].params, paramsKey);
         }
       });
     });
+    const pluginModel = action.modelName.split('&source=')[1];
+
+    if (pluginModel) {
+      set(body, 'plugin', pluginModel);
+    }
 
     const method = modelName === body.name ? 'POST' : 'PUT';
     const baseUrl = '/content-type-builder/models/';
     const requestUrl = method === 'POST' ? baseUrl : `${baseUrl}${body.name}`;
     const opts = { method, body };
+
     const response = yield call(request, requestUrl, opts, true);
 
     if (response.ok) {
@@ -116,21 +134,21 @@ export function* submitChanges(action) {
           action.context.updatePlugin('content-manager', 'leftMenuSections', leftMenuContentTypes);
         }
 
-        window.Strapi.notification.success('content-type-builder.notification.success.message.contentType.create');
+        strapi.notification.success('content-type-builder.notification.success.message.contentType.create');
 
       } else {
-        window.Strapi.notification.success('content-type-builder.notification.success.message.contentType.edit');
+        strapi.notification.success('content-type-builder.notification.success.message.contentType.edit');
       }
 
       yield put(submitActionSucceeded());
-
       yield put(resetShowButtonsProps());
       // Remove loader
       yield put(unsetButtonLoader());
     }
 
   } catch(error) {
-    window.Strapi.notification.error(error);
+    strapi.notification.error(get(error, ['response', 'payload', 'message', '0', 'messages', '0', 'id'], 'notification.error'));
+    yield put(unsetButtonLoader());
   }
 }
 

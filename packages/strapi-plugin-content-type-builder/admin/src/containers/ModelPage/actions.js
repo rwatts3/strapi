@@ -120,7 +120,7 @@ export function modelFetch(modelName) {
 
 export function modelFetchSucceeded(data) {
   const model = data;
-  const defaultKeys = ['required', 'unique', 'type', 'key', 'target', 'nature', 'targetColumnName', 'columnName'];
+  const defaultKeys = ['required', 'unique', 'type', 'key', 'target', 'nature', 'targetColumnName', 'columnName', 'multiple'];
 
   forEach(model.model.attributes, (attribute, index) => {
     map(attribute.params, (value, key) => {
@@ -155,10 +155,11 @@ export function setButtonLoader() {
   };
 }
 
-export function submit(context) {
+export function submit(context, modelName) {
   return {
     type: SUBMIT,
     context,
+    modelName,
   };
 }
 

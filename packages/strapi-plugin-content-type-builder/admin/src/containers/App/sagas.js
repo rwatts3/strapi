@@ -7,17 +7,15 @@ export function* deleteContentType(action) {
   try {
     if (action.sendRequest) {
       const requestUrl = `/content-type-builder/models/${action.itemToDelete}`;
+      const response = yield call(request, requestUrl, { method: 'DELETE' }, true);
 
-      yield call(request, requestUrl, { method: 'DELETE' });
-
-      if (action.updateLeftMenu) {
+      if (response.ok && action.updateLeftMenu) {
         action.updatePlugin('content-manager', 'leftMenuSections', action.leftMenuContentTypes);
+        strapi.notification.success('content-type-builder.notification.success.contentTypeDeleted');
       }
-      window.Strapi.notification.success('content-type-builder.notification.success.contentTypeDeleted');
     }
-
   } catch(error) {
-    window.Strapi.notification.error('content-type-builder.notification.error.message');
+    strapi.notification.error('content-type-builder.notification.error.message');
   }
 }
 
@@ -28,7 +26,7 @@ export function* fetchModels() {
 
     yield put(modelsFetchSucceeded(data));
   } catch(error) {
-    window.Strapi.notification.error('content-type-builder.notification.error.message');
+    strapi.notification.error('content-type-builder.notification.error.message');
   }
 }
 

@@ -8,7 +8,7 @@ import { fromJS } from 'immutable';
 import { first, get, includes, split } from 'lodash';
 
 // Import supported languages from admin config.
-import { languages } from '../../../../config/admin.json';
+import { languages } from '../../config/languages.json';
 
 import {
   CHANGE_LOCALE,
@@ -35,6 +35,8 @@ function languageProviderReducer(state = initialState, action) {
     case CHANGE_LOCALE:
       // Set user language in local storage.
       window.localStorage.setItem(localStorageKey, action.locale);
+      strapi.currentLanguage = action.locale;
+      
       return state
         .set('locale', action.locale);
     default:

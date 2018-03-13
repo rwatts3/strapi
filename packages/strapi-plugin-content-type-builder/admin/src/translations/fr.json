@@ -1,5 +1,6 @@
 {
-  "plugin.description": "Modelisez la structure de données de votre API.",
+  "plugin.description.short": "Modelisez la structure de données de votre API.",
+  "plugin.description.long": "Modelisez la structure de données de votre API. Créer des nouveaux champs et relations en un instant. Les fichiers se créent et se mettent à jour automatiquement.",
   "attribute.string": "Chaîne de caractères",
   "attribute.text": "Text",
   "attribute.boolean": "Booléen",
@@ -9,9 +10,15 @@
   "attribute.date": "Date",
   "attribute.json": "JSON",
   "attribute.media": "Media",
+  "attribute.password": "Mot de passe",
+  "attribute.email": "Email",
   "attribute.relation": "Relation",
+  "attribute.enumeration": "Enumération",
 
   "contentType.temporaryDisplay": "(Non sauvegardé)",
+
+  "from": "De",
+
   "home.contentTypeBuilder.name": "Content Types",
   "home.contentTypeBuilder.description": "Créez, éditer vos modèles.",
   "home.emptyContentType.title": "Il n'y a pas de model disponible",
@@ -42,6 +49,7 @@
   "form.attribute.item.number.name": "Nom",
   "form.attribute.item.json.name": "Nom",
   "form.attribute.item.media.name": "Nom",
+  "form.attribute.item.media.multiple": "Peut être relié à plusieurs fichiers",
   "form.attribute.item.string.name": "Nom",
   "form.attribute.item.settings.name": "Paramètres",
   "form.attribute.item.requiredField": "Champ obligatoire",
@@ -66,7 +74,7 @@
 
   "form.contentType.item.connections": "Connexion",
   "form.contentType.item.name": "Nom",
-  "form.contentType.item.name.description": "Les noms de modèles doivent être au singulier",
+  "form.contentType.item.name.description": "Les noms de modèles doivent être au singulier, {link}",
   "form.contentType.item.name.link.description": "regardez la documentation",
   "form.contentType.item.description": "Description",
   "form.contentType.item.description.placeholder": "Ecrivez votre petite description ici...",
@@ -81,7 +89,7 @@
   "menu.section.documentation.tutorial": "Découvrez notre",
   "menu.section.documentation.tutorialLink": "tuto vidéo.",
 
-  "modelPage.contentHeader.emptyDescription.description": "Il n'ya pas de description pour ce modèle",
+  "modelPage.contentHeader.emptyDescription.description": "Il n'y a pas de description pour ce modèle",
   "modelPage.contentType.list.title.plural": "champs",
   "modelPage.contentType.list.title.singular": "champ",
   "modelPage.contentType.list.title.including": "dont",
@@ -95,9 +103,11 @@
 
   "notification.error.message": "Une erreur est survenue",
   "notification.info.contentType.creating.notSaved": "Sauvegardez votre Modèle en cours avant d'en créer un nouveau",
+  "notification.info.optimized": "Ce plugin est optimisé pour votre localStorage",
   "notification.success.message.contentType.edit": "Votre modèle a bien été modifié",
   "notification.success.message.contentType.create": "Votre modèle a bien été créée",
   "notification.success.contentTypeDeleted": "Le modèle a bien été supprimé.",
+  "notification.info.enumeration": "Ce champs n'est pas modifiable pour le moment...😮",
 
   "popUpForm.attributes.string.description": "Titres, noms,...",
   "popUpForm.attributes.text.description": "Descriptions, paragraphes texte, articles ",
@@ -107,6 +117,8 @@
   "popUpForm.attributes.json.description": "Données au format JSON",
   "popUpForm.attributes.media.description": "Images, vidéos, PDFs et autres fichiers",
   "popUpForm.attributes.relation.description": "Pointe vers un autre Modèle",
+  "popUpForm.attributes.password.description": "Mot de passe utilisateur...",
+  "popUpForm.attributes.email.description": "Email utilisateurs",
 
   "popUpForm.attributes.string.name": "Chaîne de caractères",
   "popUpForm.attributes.text.name": "Text",
@@ -116,6 +128,8 @@
   "popUpForm.attributes.json.name": "JSON",
   "popUpForm.attributes.media.name": "Media",
   "popUpForm.attributes.relation.name": "Relation",
+  "popUpForm.attributes.email.name": "Email",
+  "popUpForm.attributes.password.name": "Mot de passe",
   "popUpForm.create": "Ajouter un Nouveau",
   "popUpForm.edit": "Modifer",
   "popUpForm.field": "Champ",

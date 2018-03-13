@@ -1,9 +1,9 @@
 import request from 'utils/request';
 
 const shouldRenderCompo = (plugin) => new Promise((resolve, reject) => {
-  request('/content-type-builder/autoReload')
+  request(`${strapi.backendURL}/content-type-builder/autoReload`)
     .then(response => {
-      plugin.preventComponentRendering = !response.autoReload;
+      plugin.preventComponentRendering = !response.autoReload.enabled;
       plugin.blockerComponentProps = {
         blockerComponentTitle: 'components.AutoReloadBlocker.header',
         blockerComponentDescription: 'components.AutoReloadBlocker.description',
@@ -15,6 +15,5 @@ const shouldRenderCompo = (plugin) => new Promise((resolve, reject) => {
     })
     .catch(err => reject(err));
 });
-
 
 export default shouldRenderCompo;

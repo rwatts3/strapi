@@ -11,7 +11,7 @@ Create a new project
 ```bash
 strapi new <name>
 
-options: [--dev]
+options: [--dev|--dbclient=<dbclient> --dbhost=<dbhost> --dbport=<dbport> --dbname=<dbname> --dbusername=<dbusername> --dbpassword=<dbpassword>]
 ```
 
 - **strapi new &#60;name&#62;**<br/>
@@ -19,6 +19,10 @@ options: [--dev]
 
 - **strapi new &#60;name&#62; --dev**<br/>
   Generates a new project called **&#60;name&#62;** and creates symlinks for the `./admin` folder and each plugin inside the `./plugin` folder. It means that the Strapi's development workflow has been set up on the machine earlier.
+
+- **strapi new &#60;name&#62; --dbclient=&#60;dbclient&#62; --dbhost=&#60;dbhost&#62; --dbport=&#60;dbport&#62; --dbname=&#60;dbname&#62; --dbusername=&#60;dbusername&#62; --dbpassword=&#60;dbpassword&#62;**<br/>
+  Generates a new project called **&#60;name&#62;** and skip the interactive database configuration and initilize with these options. **&#60;dbclient&#62;** can be `mongo`, `postgres`, `mysql`, `sqlite3` or `redis`. **&#60;dbusername&#62;** and **&#60;dbpassword&#62;** are optional.
+  
 
   See the [CONTRIBUTING guide](https://github.com/strapi/strapi/blob/master/CONTRIBUTING.md) for more details.
 
@@ -170,7 +174,7 @@ strapi generate:plugin <name>
   Example: `strapi generate:plugin user` will create the plugin at `./plugins/user`.
 
 
-Please refer to the [plugins documentation](../plugins/development.md) to know more.
+Please refer to the [plugin develoment documentation](../plugin-development/quick-start.md) to know more.
 
 ***
 
@@ -198,7 +202,7 @@ options: [--dev]
 
 > **Note: You have to restart the server to load the plugin into your project.**
 
-Please refer to the [plugins documentation](../plugins/quick-start.md) to know more.
+Please refer to the [plugins documentation](../plugin-development/quick-start.md) to know more.
 
 ***
 
@@ -215,7 +219,7 @@ strapi uninstall <name>
   Example: `strapi uninstall content-type-builder` will remove the folder at `./plugins/content-type-builder`.
 
 
-Please refer to the [plugins documentation](../plugins/quick-start.md) to know more.
+Please refer to the [plugins documentation](../plugin-development/quick-start.md) to know more.
 
 ***
 

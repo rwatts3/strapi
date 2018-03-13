@@ -19,6 +19,7 @@ const utils = require('./utils/');
 const utilsModels = require('strapi-utils').models;
 
 const PIVOT_PREFIX = '_pivot_';
+const GLOBALS = {};
 
 /**
  * Bookshelf hook
@@ -40,23 +41,7 @@ module.exports = function(strapi) {
      */
 
     initialize: cb => {
-      let globalName;
-
-      // Initialize collections
-      _.set(strapi, 'bookshelf.collections', {});
-
-      // Return callback if there is no model
-      if (_.isEmpty(strapi.models)) {
-        return cb();
-      }
-
-      const connections = _.pickBy(strapi.config.connections, {
-        connector: 'strapi-bookshelf'
-      });
-
-      const done = _.after(_.size(connections), () => {
-        cb();
-      });
+      const connections = _.pickBy(strapi.config.connections, { connector: 'strapi-bookshelf' });
 
       _.forEach(connections, (connection, connectionName) => {
         // Apply defaults
@@ -78,344 +63,539 @@ module.exports = function(strapi) {
         }
 
         // Load plugins
-        if (_.get(connection, 'options.plugins') !== false) {
+        if (_.get(connection, 'options.plugins', true) !== false) {
           ORM.plugin('visibility');
           ORM.plugin('pagination');
         }
 
-        // Select models concerned by this connection
-        const models = _.pickBy(strapi.models, {
-          connection: connectionName
-        });
+        const mountModels = (models, target, plugin = false) => {
+          // Parse every registered model.
+          _.forEach(models, (definition, model) => {
+            definition.globalName = _.upperFirst(_.camelCase(definition.globalId));
 
-        // Return callback if there is no model
-        if (_.isEmpty(models)) {
-          cb();
+            _.defaults(definition, {
+              primaryKey: 'id'
+            });
 
-          // Break the loop.
-          return false;
-        }
+            // Define local GLOBALS to expose every models in this file.
+            GLOBALS[definition.globalId] = {};
 
-        const loadedHook = _.after(_.size(models), () => {
-          done();
-        });
+            // Add some informations about ORM & client connection & tableName
+            definition.orm = 'bookshelf';
+            definition.client = _.get(connection.settings, 'client');
 
-        // Parse every registered model.
-        _.forEach(models, (definition, model) => {
-          globalName = _.upperFirst(_.camelCase(definition.globalId));
+            // Register the final model for Bookshelf.
+            const loadedModel = _.assign({
+                tableName: definition.collectionName,
+                hasTimestamps: _.get(definition, 'options.timestamps') === true,
+                idAttribute: _.get(definition, 'options.idAttribute', 'id'),
+                associations: []
+              }, definition.options);
 
-          _.defaults(definition, {
-            primaryKey: 'id'
-          });
+            if (_.isString(_.get(connection, 'options.pivot_prefix'))) {
+              loadedModel.toJSON = function(options = {}) {
+                const { shallow = false, omitPivot = false } = options;
+                const attributes = this.serialize(options);
 
-          // Make sure the model has a table name.
-          // If not, use the model name.
-          if (_.isEmpty(definition.collectionName)) {
-            definition.collectionName = model;
-          }
+                if (!shallow) {
+                  const pivot = this.pivot && !omitPivot && this.pivot.attributes;
 
-          // Add some informations about ORM & client connection
-          definition.orm = 'bookshelf';
-          definition.client = _.get(connection.settings, 'client');
+                  // Remove pivot attributes with prefix.
+                  _.keys(pivot).forEach(key => delete attributes[`${PIVOT_PREFIX}${key}`]);
 
-          // Register the final model for Bookshelf.
-          const loadedModel = _.assign(
-            {
-              tableName: definition.collectionName,
-              hasTimestamps: _.get(definition, 'options.timestamps') === true,
-              idAttribute: _.get(definition, 'options.idAttribute') || 'id'
-            },
-            definition.options
-          );
+                  // Add pivot attributes without prefix.
+                  const pivotAttributes = _.mapKeys(pivot, (value, key) => `${connection.options.pivot_prefix}${key}`);
 
-          if (_.isString(_.get(connection, 'options.pivot_prefix'))) {
-            loadedModel.toJSON = function(options = {}) {
-              const { shallow = false, omitPivot = false } = options;
-              const attributes = this.serialize(options);
-
-              if (!shallow) {
-                const pivot = this.pivot &&
-                  !omitPivot &&
-                  this.pivot.attributes;
-
-                // Remove pivot attributes with prefix.
-                _.keys(pivot).forEach(
-                  key => delete attributes[`${PIVOT_PREFIX}${key}`]
-                );
-
-                // Add pivot attributes without prefix.
-                const pivotAttributes = _.mapKeys(
-                  pivot,
-                  (value, key) => `${connection.options.pivot_prefix}${key}`
-                );
-
-                return Object.assign({}, attributes, pivotAttributes);
-              }
-
-              return attributes;
-            };
-          }
-
-          // Initialize the global variable with the
-          // capitalized model name.
-          global[globalName] = {};
-
-          // Call this callback function after we are done parsing
-          // all attributes for relationships-- see below.
-          const done = _.after(_.size(definition.attributes), () => {
-            try {
-              // External function to map key that has been updated with `columnName`
-              const mapper = (params = {}) =>
-                _.mapKeys(params, (value, key) => {
-                  const attr = definition.attributes[key] || {};
-
-                  return _.isPlainObject(attr) &&
-                    _.isString(attr['columnName'])
-                    ? attr['columnName']
-                    : key;
-                });
-
-              // Initialize lifecycle callbacks.
-              loadedModel.initialize = function() {
-                const lifecycle = {
-                  creating: 'beforeCreate',
-                  created: 'afterCreate',
-                  destroying: 'beforeDestroy',
-                  destroyed: 'afterDestroy',
-                  updating: 'beforeUpdate',
-                  updated: 'afterUpdate',
-                  fetching: 'beforeFetch',
-                  'fetching:collection': 'beforeFetchCollection',
-                  fetched: 'afterFetch',
-                  'fetched:collection': 'afterFetchCollection',
-                  saving: 'beforeSave',
-                  saved: 'afterSave'
-                };
-
-                _.forEach(lifecycle, (fn, key) => {
-                  if (_.isFunction(strapi.models[model.toLowerCase()][fn])) {
-                    this.on(key, strapi.models[model.toLowerCase()][fn]);
-                  }
-                });
-
-                this.on('saving', (instance, attrs, options) => {
-                  instance.attributes = mapper(instance.attributes);
-                  attrs = mapper(attrs);
-
-                  return _.isFunction(
-                    strapi.models[model.toLowerCase()]['beforeSave']
-                  )
-                    ? strapi.models[model.toLowerCase()]['beforeSave']
-                    : Promise.resolve();
-                });
-              };
-
-              loadedModel.hidden = _.keys(
-                _.keyBy(
-                  _.filter(definition.attributes, (value, key) => {
-                    if (
-                      value.hasOwnProperty('columnName') &&
-                      !_.isEmpty(value.columnName) &&
-                      value.columnName !== key
-                    ) {
-                      return true;
-                    }
-                  }),
-                  'columnName'
-                )
-              );
-
-              global[globalName] = ORM.Model.extend(loadedModel);
-              global[pluralize(globalName)] = ORM.Collection.extend({
-                model: global[globalName]
-              });
-
-              // Expose ORM functions through the `strapi.models` object.
-              strapi.models[model] = _.assign(global[globalName], strapi.models[model]);
-
-              // Push attributes to be aware of model schema.
-              strapi.models[model]._attributes = definition.attributes;
-
-              loadedHook();
-            } catch (err) {
-              strapi.log.error(
-                'Impossible to register the `' + model + '` model.'
-              );
-              strapi.log.error(err);
-              strapi.stop();
-            }
-          });
-
-          if (_.isEmpty(definition.attributes)) {
-            done();
-          }
-
-          // Add every relationships to the loaded model for Bookshelf.
-          // Basic attributes don't need this-- only relations.
-          _.forEach(definition.attributes, (details, name) => {
-            const verbose = _.get(
-              utilsModels.getNature(details, name, undefined, model.toLowerCase()),
-              'verbose'
-            ) || '';
-
-            // Build associations key
-            utilsModels.defineAssociations(
-              globalName,
-              definition,
-              details,
-              name
-            );
-
-            switch (verbose) {
-              case 'hasOne': {
-                const FK = _.findKey(
-                  strapi.models[details.model].attributes,
-                  details => {
-                    if (
-                      details.hasOwnProperty('model') &&
-                      details.model === model &&
-                      details.hasOwnProperty('via') &&
-                      details.via === name
-                    ) {
-                      return details;
-                    }
-                  }
-                );
-
-                const globalId = _.get(
-                  strapi.models,
-                  `${details.model.toLowerCase()}.globalId`
-                );
-
-                loadedModel[name] = function() {
-                  return this.hasOne(
-                    global[globalId],
-                    _.get(
-                      strapi.models[details.model].attributes,
-                      `${FK}.columnName`
-                    ) || FK
-                  );
-                };
-                break;
-              }
-              case 'hasMany': {
-                const globalId = _.get(
-                  strapi.models,
-                  `${details.collection.toLowerCase()}.globalId`
-                );
-                const FKTarget = _.get(
-                  strapi.models[globalId.toLowerCase()].attributes,
-                  `${details.via}.columnName`
-                ) || details.via;
-
-                // Set this info to be able to see if this field is a real database's field.
-                details.isVirtual = true;
-
-                loadedModel[name] = function() {
-                  return this.hasMany(global[globalId], FKTarget);
-                };
-                break;
-              }
-              case 'belongsTo': {
-                const globalId = _.get(
-                  strapi.models,
-                  `${details.model.toLowerCase()}.globalId`
-                );
-
-                loadedModel[name] = function() {
-                  return this.belongsTo(
-                    global[globalId],
-                    _.get(details, 'columnName') || name
-                  );
-                };
-                break;
-              }
-              case 'belongsToMany': {
-                const collectionName = _.get(details, 'collectionName') ||
-                  _.map(
-                    _.sortBy(
-                      [
-                        strapi.models[details.collection].attributes[
-                          details.via
-                        ],
-                        details
-                      ],
-                      'collection'
-                    ),
-                    table => {
-                      return _.snakeCase(
-                        pluralize.plural(table.collection) +
-                          ' ' +
-                          pluralize.plural(table.via)
-                      );
-                    }
-                  ).join('__');
-
-                const relationship = _.clone(
-                  strapi.models[details.collection].attributes[details.via]
-                );
-
-                // Force singular foreign key
-                relationship.attribute = pluralize.singular(
-                  relationship.collection
-                );
-                details.attribute = pluralize.singular(details.collection);
-
-                // Define PK column
-                details.column = utils.getPK(model, strapi.models);
-                relationship.column = utils.getPK(
-                  details.collection,
-                  strapi.models
-                );
-
-                // Sometimes the many-to-many relationships
-                // is on the same keys on the same models (ex: `friends` key in model `User`)
-                if (
-                  details.attribute + '_' + details.column ===
-                  relationship.attribute + '_' + relationship.column
-                ) {
-                  relationship.attribute = pluralize.singular(details.via);
+                  return Object.assign({}, attributes, pivotAttributes);
                 }
 
-                const globalId = _.get(
-                  strapi.models,
-                  `${details.collection.toLowerCase()}.globalId`
+                return attributes;
+              };
+            }
+
+            // Initialize the global variable with the
+            // capitalized model name.
+            if (!plugin) {
+              global[definition.globalName] = {};
+            }
+
+            // Call this callback function after we are done parsing
+            // all attributes for relationships-- see below.
+            const done = _.after(_.size(definition.attributes), () => {
+              try {
+                // External function to map key that has been updated with `columnName`
+                const mapper = (params = {}) =>
+                  _.mapKeys(params, (value, key) => {
+                    const attr = definition.attributes[key] || {};
+
+                    return _.isPlainObject(attr) &&
+                      _.isString(attr['columnName'])
+                      ? attr['columnName']
+                      : key;
+                  });
+
+                // Update serialize to reformat data for polymorphic associations.
+                loadedModel.serialize = function(options) {
+                  const attrs = _.clone(this.attributes);
+
+                  if (options && options.shallow) {
+                    return attrs;
+                  }
+
+                  const relations = this.relations;
+
+                  // Extract association except polymorphic.
+                  const associations = definition.associations
+                    .filter(association => association.nature.toLowerCase().indexOf('morph') === -1);
+                  // Extract polymorphic association.
+                  const polymorphicAssociations = definition.associations
+                    .filter(association => association.nature.toLowerCase().indexOf('morph') !== -1);
+
+                  polymorphicAssociations.map(association => {
+                    // Retrieve relation Bookshelf object.
+                    const relation = relations[association.alias];
+
+                    if (relation) {
+                      // Extract raw JSON data.
+                      attrs[association.alias] = relation.toJSON ? relation.toJSON(options) : relation;
+
+                      // Retrieve opposite model.
+                      const model = association.plugin ?
+                        strapi.plugins[association.plugin].models[association.collection || association.model]:
+                        strapi.models[association.collection || association.model];
+
+                      // Reformat data by bypassing the many-to-many relationship.
+                      switch (association.nature) {
+                        case 'oneToManyMorph':
+                          attrs[association.alias] = attrs[association.alias][model.collectionName];
+                          break;
+                        case 'manyToManyMorph':
+                          attrs[association.alias] = attrs[association.alias].map(rel => rel[model.collectionName]);
+                          break;
+                        case 'oneMorphToOne':
+                          attrs[association.alias] = attrs[association.alias].related;
+                          break;
+                        case 'manyMorphToOne':
+                          attrs[association.alias] = attrs[association.alias].map(obj => obj.related);
+                          break;
+                        default:
+                      }
+                    }
+                  });
+
+                  associations.map(association => {
+                    const relation = relations[association.alias];
+
+                    if (relation) {
+                      // Extract raw JSON data.
+                      attrs[association.alias] = relation.toJSON ? relation.toJSON(options) : relation;
+                    }
+                  });
+
+                  return attrs;
+                }
+
+                // Initialize lifecycle callbacks.
+                loadedModel.initialize = function() {
+                  const lifecycle = {
+                    creating: 'beforeCreate',
+                    created: 'afterCreate',
+                    destroying: 'beforeDestroy',
+                    destroyed: 'afterDestroy',
+                    updating: 'beforeUpdate',
+                    updated: 'afterUpdate',
+                    fetching: 'beforeFetch',
+                    'fetching:collection': 'beforeFetchCollection',
+                    fetched: 'afterFetch',
+                    'fetched:collection': 'afterFetchCollection',
+                    saving: 'beforeSave',
+                    saved: 'afterSave'
+                  };
+
+                  _.forEach(lifecycle, (fn, key) => {
+                    if (_.isFunction(target[model.toLowerCase()][fn])) {
+                      this.on(key, target[model.toLowerCase()][fn]);
+                    }
+                  });
+
+                  // Update withRelated level to bypass many-to-many association for polymorphic relationshiips.
+                  // Apply only during fetching.
+                  this.on('fetching fetching:collection', (instance, attrs, options) => {
+                    if (_.isArray(options.withRelated)) {
+                      options.withRelated = options.withRelated.map(path => {
+                        const association = definition.associations
+                          .filter(association => association.nature.toLowerCase().indexOf('morph') !== -1)
+                          .filter(association => association.alias === path || association.via === path)[0];
+
+                        if (association) {
+                          // Override on polymorphic path only.
+                          if (_.isString(path) && path === association.via) {
+                            return `related.${association.via}`;
+                          } else if (_.isString(path) && path === association.alias) {
+                            // MorphTo side.
+                            if (association.related) {
+                              return `${association.alias}.related`;
+                            }
+
+                            // oneToMorph or manyToMorph side.
+                            // Retrieve collection name because we are using it to build our hidden model.
+                            const model = association.plugin ?
+                              strapi.plugins[association.plugin].models[association.collection || association.model]:
+                              strapi.models[association.collection || association.model];
+
+                            return `${association.alias}.${model.collectionName}`;
+                          }
+                        }
+
+                        return path;
+                      });
+                    }
+
+                    return _.isFunction(
+                      target[model.toLowerCase()]['beforeFetchCollection']
+                    )
+                      ? target[model.toLowerCase()]['beforeFetchCollection']
+                      : Promise.resolve();
+                  });
+
+                  this.on('saving', (instance, attrs, options) => {
+                    instance.attributes = mapper(instance.attributes);
+                    attrs = mapper(attrs);
+
+                    return _.isFunction(
+                      target[model.toLowerCase()]['beforeSave']
+                    )
+                      ? target[model.toLowerCase()]['beforeSave']
+                      : Promise.resolve();
+                  });
+                };
+
+                loadedModel.hidden = _.keys(
+                  _.keyBy(
+                    _.filter(definition.attributes, (value, key) => {
+                      if (
+                        value.hasOwnProperty('columnName') &&
+                        !_.isEmpty(value.columnName) &&
+                        value.columnName !== key
+                      ) {
+                        return true;
+                      }
+                    }),
+                    'columnName'
+                  )
                 );
 
-                // Set this info to be able to see if this field is a real database's field.
-                details.isVirtual = true;
+                GLOBALS[definition.globalId] = ORM.Model.extend(loadedModel);
 
-                loadedModel[name] = function() {
+                if (!plugin) {
+                  // Only expose as real global variable the models which
+                  // are not scoped in a plugin.
+                  global[definition.globalId] = GLOBALS[definition.globalId];
+                }
+
+                // Expose ORM functions through the `strapi.models[xxx]`
+                // or `strapi.plugins[xxx].models[yyy]` object.
+                target[model] = _.assign(GLOBALS[definition.globalId], target[model]);
+
+                // Push attributes to be aware of model schema.
+                target[model]._attributes = definition.attributes;
+
+              } catch (err) {
+                strapi.log.error('Impossible to register the `' + model + '` model.');
+                strapi.log.error(err);
+                strapi.stop();
+              }
+            });
+
+            if (_.isEmpty(definition.attributes)) {
+              done();
+            }
+
+            // Add every relationships to the loaded model for Bookshelf.
+            // Basic attributes don't need this-- only relations.
+            _.forEach(definition.attributes, (details, name) => {
+              const verbose = _.get(
+                utilsModels.getNature(details, name, undefined, model.toLowerCase()),
+                'verbose'
+              ) || '';
+
+              // Build associations key
+              utilsModels.defineAssociations(
+                model.toLowerCase(),
+                definition,
+                details,
+                name
+              );
+
+              let globalId;
+              const globalName = details.model || details.collection || '';
+
+              // Exclude polymorphic association.
+              if (globalName !== '*') {
+                globalId = details.plugin ?
+                  _.get(strapi.plugins,`${details.plugin}.models.${globalName.toLowerCase()}.globalId`):
+                  _.get(strapi.models, `${globalName.toLowerCase()}.globalId`);
+              }
+
+              switch (verbose) {
+                case 'hasOne': {
+                  const FK = details.plugin ?
+                    _.findKey(
+                      strapi.plugins[details.plugin].models[details.model].attributes,
+                      details => {
+                        if (
+                          details.hasOwnProperty('model') &&
+                          details.model === model &&
+                          details.hasOwnProperty('via') &&
+                          details.via === name
+                        ) {
+                          return details;
+                        }
+                      }
+                    ):
+                    _.findKey(
+                      strapi.models[details.model].attributes,
+                      details => {
+                        if (
+                          details.hasOwnProperty('model') &&
+                          details.model === model &&
+                          details.hasOwnProperty('via') &&
+                          details.via === name
+                        ) {
+                          return details;
+                        }
+                      }
+                    );
+
+                  const columnName = details.plugin ?
+                    _.get(strapi.plugins, `${details.plugin}.models.${details.model}.attributes.${FK}.columnName`, FK):
+                    _.get(strapi.models, `${details.model}.attributes.${FK}.columnName`, FK);
+
+                  loadedModel[name] = function() {
+                    return this.hasOne(
+                      GLOBALS[globalId],
+                      columnName
+                    );
+                  };
+                  break;
+                }
+                case 'hasMany': {
+                  const columnName = details.plugin ?
+                    _.get(strapi.plugins, `${details.plugin}.models.${globalId.toLowerCase()}.attributes.${details.via}.columnName`, details.via):
+                    _.get(strapi.models[globalId.toLowerCase()].attributes, `${details.via}.columnName`, details.via);
+
+                  // Set this info to be able to see if this field is a real database's field.
+                  details.isVirtual = true;
+
+                  loadedModel[name] = function() {
+                    return this.hasMany(GLOBALS[globalId], columnName);
+                  };
+                  break;
+                }
+                case 'belongsTo': {
+                  loadedModel[name] = function() {
+                    return this.belongsTo(
+                      GLOBALS[globalId],
+                      _.get(details, 'columnName', name)
+                    );
+                  };
+                  break;
+                }
+                case 'belongsToMany': {
+                  const collection = details.plugin ?
+                    strapi.plugins[details.plugin].models[details.collection]:
+                    strapi.models[details.collection];
+
+                  const collectionName = _.get(details, 'collectionName') ||
+                    _.map(
+                      _.sortBy(
+                        [
+                          collection.attributes[
+                            details.via
+                          ],
+                          details
+                        ],
+                        'collection'
+                      ),
+                      table => {
+                        return _.snakeCase(
+                          pluralize.plural(table.collection) +
+                            ' ' +
+                            pluralize.plural(table.via)
+                        );
+                      }
+                    ).join('__');
+
+                  const relationship = _.clone(
+                    collection.attributes[details.via]
+                  );
+
+                  // Force singular foreign key
+                  relationship.attribute = pluralize.singular(
+                    relationship.collection
+                  );
+                  details.attribute = pluralize.singular(details.collection);
+
+                  // Define PK column
+                  details.column = utils.getPK(model, strapi.models);
+                  relationship.column = utils.getPK(
+                    details.collection,
+                    strapi.models
+                  );
+
+                  // Sometimes the many-to-many relationships
+                  // is on the same keys on the same models (ex: `friends` key in model `User`)
                   if (
-                    _.isArray(_.get(details, 'withPivot')) &&
-                    !_.isEmpty(details.withPivot)
+                    details.attribute + '_' + details.column ===
+                    relationship.attribute + '_' + relationship.column
                   ) {
+                    relationship.attribute = pluralize.singular(details.via);
+                  }
+
+                  // Set this info to be able to see if this field is a real database's field.
+                  details.isVirtual = true;
+
+                  loadedModel[name] = function() {
+                    if (
+                      _.isArray(_.get(details, 'withPivot')) &&
+                      !_.isEmpty(details.withPivot)
+                    ) {
+                      return this.belongsToMany(
+                        GLOBALS[globalId],
+                        collectionName,
+                        relationship.attribute + '_' + relationship.column,
+                        details.attribute + '_' + details.column
+                      ).withPivot(details.withPivot);
+                    }
+
                     return this.belongsToMany(
-                      global[globalId],
+                      GLOBALS[globalId],
                       collectionName,
                       relationship.attribute + '_' + relationship.column,
                       details.attribute + '_' + details.column
-                    ).withPivot(details.withPivot);
+                    );
+                  };
+                  break;
+                }
+                case 'morphOne': {
+                  const model = details.plugin ?
+                    strapi.plugins[details.plugin].models[details.model]:
+                    strapi.models[details.model];
+
+                  const globalId = `${model.collectionName}_morph`;
+
+                  loadedModel[name] =  function() {
+                    return this
+                      .morphOne(GLOBALS[globalId], details.via, `${definition.collectionName}`)
+                      .query(qb => {
+                        qb.where(_.get(model, `attributes.${details.via}.filter`, 'field'), name);
+                      });
                   }
+                  break;
+                }
+                case 'morphMany': {
+                  const collection = details.plugin ?
+                    strapi.plugins[details.plugin].models[details.collection]:
+                    strapi.models[details.collection];
 
-                  return this.belongsToMany(
-                    global[globalId],
-                    collectionName,
-                    relationship.attribute + '_' + relationship.column,
-                    details.attribute + '_' + details.column
-                  );
-                };
-                break;
-              }
-              default: {
-                break;
-              }
-            }
+                  const globalId = `${collection.collectionName}_morph`;
 
-            done();
+                  loadedModel[name] =  function() {
+                    return this
+                      .morphMany(GLOBALS[globalId], details.via, `${definition.collectionName}`)
+                      .query(qb => {
+                        qb.where(_.get(collection, `attributes.${details.via}.filter`, 'field'), name);
+                      });
+                  }
+                  break;
+                }
+                case 'belongsToMorph':
+                case 'belongsToManyMorph': {
+                  const association = definition.associations
+                    .find(association => association.alias === name);
+
+                  const morphValues = association.related.map(id => {
+                    let models = Object.values(strapi.models).filter(model => model.globalId === id);
+
+                    if (models.length === 0) {
+                      models = Object.keys(strapi.plugins).reduce((acc, current) => {
+                        const models = Object.values(strapi.plugins[current].models).filter(model => model.globalId === id);
+
+                        if (acc.length === 0 && models.length > 0) {
+                          acc = models;
+                        }
+
+                        return acc;
+                      }, []);
+                    }
+
+                    if (models.length === 0) {
+                      strapi.log.error('Impossible to register the `' + model + '` model.');
+                      strapi.log.error('The collection name cannot be found for the morphTo method.');
+                      strapi.stop();
+                    }
+
+                    return models[0].collectionName;
+                  });
+
+                  // Define new model.
+                  const options = {
+                    tableName: `${definition.collectionName}_morph`,
+                    [definition.collectionName]: function () {
+                      return this
+                        .belongsTo(
+                          GLOBALS[definition.globalId],
+                          `${definition.collectionName}_id`
+                        );
+                    },
+                    related: function () {
+                      return this
+                        .morphTo(name, ...association.related.map((id, index) => [GLOBALS[id], morphValues[index]]));
+                    }
+                  };
+
+                  GLOBALS[options.tableName] = ORM.Model.extend(options);
+
+                  // Set polymorphic table name to the main model.
+                  target[model].morph = GLOBALS[options.tableName];
+
+                  // Hack Bookshelf to create a many-to-many polymorphic association.
+                  // Upload has many Upload_morph that morph to different model.
+                  loadedModel[name] = function () {
+                    if (verbose === 'belongsToMorph') {
+                      return this.hasOne(
+                        GLOBALS[options.tableName],
+                        `${definition.collectionName}_id`
+                      );
+                    }
+
+                    return this.hasMany(
+                      GLOBALS[options.tableName],
+                      `${definition.collectionName}_id`
+                    );
+                  };
+                  break;
+                }
+                default: {
+                  break;
+                }
+              }
+
+              done();
+            });
           });
+        };
+
+        // Mount `./api` models.
+        mountModels(_.pickBy(strapi.models, { connection: connectionName }), strapi.models);
+
+        // Mount `./plugins` models.
+        _.forEach(strapi.plugins, (plugin, name) => {
+          mountModels(_.pickBy(strapi.plugins[name].models, { connection: connectionName }), plugin.models, name);
         });
       });
+
+      cb();
     },
 
     getQueryParams: (value, type, key) => {
@@ -466,7 +646,7 @@ module.exports = function(strapi) {
           break;
         case '_sort':
           result.key = `sort`;
-          result.value = (value === 'desc') ? '-' : '';
+          result.value = (_.toLower(value) === 'desc') ? '-' : '';
           result.value += key;
           break;
         case '_start':
@@ -478,15 +658,19 @@ module.exports = function(strapi) {
           result.value = parseFloat(value);
           break;
         default:
-          result = undefined;
+          return undefined;
       }
 
       return result;
     },
 
     manageRelations: async function (model, params) {
-      const models = strapi.models;
-      const Model = strapi.models[model];
+      const models = _.assign(_.clone(strapi.models), Object.keys(strapi.plugins).reduce((acc, current) => {
+        _.assign(acc, strapi.plugins[current].models);
+        return acc;
+      }, {}));
+
+      const Model = models[model];
 
       const virtualFields = [];
       const record = await Model
@@ -536,7 +720,7 @@ module.exports = function(strapi) {
                     .then(response => {
                       const record = response ? response.toJSON() : response;
 
-                      if (record && _.isObject(record[details.via])) {
+                      if (record && _.isObject(record[details.via]) && record[details.via][current] !== value[current]) {
                         return this.manageRelations(model, {
                           id: record[details.via][models[details.model || details.collection].primaryKey] || record[details.via].id,
                           values: {
@@ -591,7 +775,7 @@ module.exports = function(strapi) {
                     id: value[Model.primaryKey] || value.id || value._id,
                     values: association.nature === 'manyToMany' ? params.values : value,
                     foreignKey: current
-                  }));
+                  }, details.plugin));
                 });
 
                 toRemove.forEach(value => {
@@ -601,12 +785,80 @@ module.exports = function(strapi) {
                     id: value[Model.primaryKey] || value.id || value._id,
                     values: association.nature === 'manyToMany' ? params.values : value,
                     foreignKey: current
-                  }));
+                  }, details.plugin));
                 });
               } else if (_.get(Model._attributes, `${current}.isVirtual`) !== true) {
                 acc[current] = params.values[current];
               }
 
+              break;
+            case 'manyMorphToMany':
+            case 'manyMorphToOne':
+              // Update the relational array.
+              params.values[current].forEach(obj => {
+                const model = obj.source && obj.source !== 'content-manager' ?
+                  strapi.plugins[obj.source].models[obj.ref]:
+                  strapi.models[obj.ref];
+
+                virtualFields.push(this.addRelationMorph(details.model || details.collection, {
+                  id: response[this.primaryKey],
+                  alias: association.alias,
+                  ref: model.collectionName,
+                  refId: obj.refId,
+                  field: obj.field
+                }, obj.source));
+              });
+              break;
+            case 'oneToManyMorph':
+            case 'manyToManyMorph':
+              const transformToArrayID = (array) => {
+                if(_.isArray(array)) {
+                  return array.map(value => {
+                    if (_.isPlainObject(value)) {
+                      return value._id || value.id;
+                    }
+
+                    return value;
+                  })
+                }
+
+                if (association.type === 'model') {
+                  return _.isEmpty(array) ? [] : transformToArrayID([array]);
+                }
+
+                return [];
+              };
+
+              // Compare array of ID to find deleted files.
+              const currentValue = transformToArrayID(response[current]).map(id => id.toString());
+              const storedValue = transformToArrayID(params.values[current]).map(id => id.toString());
+
+              const toAdd = _.difference(storedValue, currentValue);
+              const toRemove = _.difference(currentValue, storedValue);
+
+              toAdd.forEach(id => {
+                virtualFields.push(this.addRelationMorph(details.model || details.collection, {
+                  id,
+                  alias: association.via,
+                  ref: Model.collectionName,
+                  refId: response.id,
+                  field: association.alias
+                }, details.plugin));
+              });
+
+              // Update the relational array.
+              toRemove.forEach(id => {
+                virtualFields.push(this.removeRelationMorph(details.model || details.collection, {
+                  id,
+                  alias: association.via,
+                  ref: Model.collectionName,
+                  refId: response.id,
+                  field: association.alias
+                }, details.plugin));
+              });
+              break;
+            case 'oneMorphToOne':
+            case 'oneMorphToMany':
               break;
             default:
           }
@@ -631,8 +883,13 @@ module.exports = function(strapi) {
       await Promise.all(virtualFields);
     },
 
-    addRelation: async function (model, params) {
-      const Model = strapi.models[model];
+    addRelation: async function (model, params, source) {
+      const models = _.assign(_.clone(strapi.models), Object.keys(strapi.plugins).reduce((acc, current) => {
+        _.assign(acc, strapi.plugins[current].models);
+        return acc;
+      }, {}));
+
+      const Model = models[model];
       const association = Model.associations.filter(x => x.via === params.foreignKey)[0];
 
       if (!association) {
@@ -643,7 +900,7 @@ module.exports = function(strapi) {
       switch (association.nature) {
         case 'oneToOne':
         case 'oneToMany':
-          return this.manageRelations(model, params)
+          return this.manageRelations(model, params);
         case 'manyToMany':
           return Model.forge({
             [Model.primaryKey]: parseFloat(params[Model.primaryKey])
@@ -654,8 +911,14 @@ module.exports = function(strapi) {
       }
     },
 
-    removeRelation: async function (model, params) {
-      const Model = strapi.models[model];
+    removeRelation: async function (model, params, source) {
+      const models = _.assign(_.clone(strapi.models), Object.keys(strapi.plugins).reduce((acc, current) => {
+        _.assign(acc, strapi.plugins[current].models);
+        return acc;
+      }, {}));
+
+      const Model = models[model];
+
       const association = Model.associations.filter(x => x.via === params.foreignKey)[0];
 
       if (!association) {
@@ -666,7 +929,7 @@ module.exports = function(strapi) {
       switch (association.nature) {
         case 'oneToOne':
         case 'oneToMany':
-          return this.manageRelations(model, params)
+          return this.manageRelations(model, params);
         case 'manyToMany':
           return Model.forge({
             [Model.primaryKey]: parseFloat(params[Model.primaryKey])
@@ -675,6 +938,58 @@ module.exports = function(strapi) {
           // Resolve silently.
           return Promise.resolve();
       }
+    },
+
+    addRelationMorph: async function (model, params, source) {
+      const models = _.assign(_.clone(strapi.models), Object.keys(strapi.plugins).reduce((acc, current) => {
+        _.assign(acc, strapi.plugins[current].models);
+        return acc;
+      }, {}));
+
+      const Model = models[model];
+
+      const record = await Model.morph.forge()
+        .where({
+          [`${Model.collectionName}_id`]: params.id,
+          [`${params.alias}_id`]: params.refId,
+          [`${params.alias}_type`]: params.ref,
+          field: params.field
+        })
+        .fetch({
+          withRelated: Model.associations.map(x => x.alias)
+        });
+
+      const entry = record ? record.toJSON() : record;
+
+      if (entry) {
+        return Promise.resolve();
+      }
+
+      return await Model.morph.forge({
+          [`${Model.collectionName}_id`]: params.id,
+          [`${params.alias}_id`]: params.refId,
+          [`${params.alias}_type`]: params.ref,
+          field: params.field
+        })
+        .save();
+    },
+
+    removeRelationMorph: async function (model, params, source) {
+      const models = _.assign(_.clone(strapi.models), Object.keys(strapi.plugins).reduce((acc, current) => {
+        _.assign(acc, strapi.plugins[current].models);
+        return acc;
+      }, {}));
+
+      const Model = models[model];
+
+      return await Model.morph.forge()
+        .where({
+          [`${Model.collectionName}_id`]: params.id,
+          [`${params.alias}_id`]: params.refId,
+          [`${params.alias}_type`]: params.ref,
+          field: params.field
+        })
+        .destroy();
     }
   };
 

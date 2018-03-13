@@ -40,11 +40,24 @@ program
   .description('output your version of Strapi')
   .action(program.versionInformation);
 
+
+// `$ strapi console`
+program
+  .command('console')
+  .description('open the Strapi framework console')
+  .action(require('./strapi-console'));
+
 // `$ strapi new`
 program
   .command('new')
   .option('-d, --dev', 'Development mode')
-  .description('create a new application ')
+  .option('--dbclient <dbclient>', 'Database client')
+  .option('--dbhost <dbhost>', 'Database host')
+  .option('--dbport <dbport>', 'Database port')
+  .option('--dbname <dbname>', 'Database name')
+  .option('--dbusername <dbusername>', 'Database username')
+  .option('--dbpassword <dbpassword>', 'Database password')
+  .description('create a new application')
   .action(require('./strapi-new'));
 
 // `$ strapi start`

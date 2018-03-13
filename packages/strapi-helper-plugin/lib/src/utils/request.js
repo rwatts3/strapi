@@ -1,4 +1,5 @@
 import 'whatwg-fetch';
+import auth from 'utils/auth';
 
 /**
  * Parses the JSON returned by a network request
@@ -18,9 +19,13 @@ function parseJSON(response) {
  *
  * @return {object|undefined} Returns either the response, or throws an error
  */
-function checkStatus(response) {
+function checkStatus(response, checkToken = true) {
   if (response.status >= 200 && response.status < 300) {
     return response;
+  }
+
+  if (response.status === 401 && auth.getToken() && checkToken) {
+    return checkTokenValidity(response);
   }
 
   return parseJSON(response).then(responseFormatted => {
@@ -29,6 +34,29 @@ function checkStatus(response) {
     error.response.payload = responseFormatted;
     throw error;
   });
+}
+
+function checkTokenValidity(response) {
+  const options = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${auth.getToken()}`,
+    },
+  };
+
+  if (auth.getToken()) {
+    return fetch(`${strapi.backendURL}/user/me`, options)
+    .then(resp => {
+      if (response.status === 401) {
+        window.location = `${strapi.remoteURL}/plugins/users-permissions/auth/login`;
+
+        auth.clearAppStorage();
+      }
+
+      return checkStatus(response, false);
+    });
+  }
 }
 
 /**
@@ -50,7 +78,7 @@ function formatQueryParams(params) {
 */
 function serverRestartWatcher(response) {
   return new Promise((resolve, reject) => {
-    fetch(`${Strapi.apiUrl}/_health`, {
+    fetch(`${strapi.backendURL}/_health`, {
       method: 'HEAD',
       mode: 'no-cors',
       headers: {
@@ -59,6 +87,8 @@ function serverRestartWatcher(response) {
       }
     })
       .then(() => {
+        // Hide the global OverlayBlocker
+        strapi.unlockApp();
         resolve(response);
       })
       .catch(err => {
@@ -78,35 +108,47 @@ function serverRestartWatcher(response) {
  *
  * @return {object}           The response data
  */
- export default function request(url, options = {}, shouldWatchServerRestart = false) {
-   // Set headers
-   options.headers = Object.assign({
-     'Content-Type': 'application/json',
-   }, options.headers);
+export default function request(url, options = {}, shouldWatchServerRestart = false, stringify = true ) {
+ // Set headers
+  if (!options.headers) {
+    options.headers = Object.assign({
+      'Content-Type': 'application/json',
+    }, options.headers, {
+      'X-Forwarded-Host': 'strapi',
+    });
+  }
 
-   // Add parameters to url
-   url = _.startsWith(url, '/')
-     ? `${Strapi.apiUrl}${url}`
-     : url;
+  const token = auth.getToken();
 
-   if (options && options.params) {
-     const params = formatQueryParams(options.params);
-     url = `${url}?${params}`;
-   }
+  if (token) {
+    options.headers = Object.assign({
+      'Authorization': `Bearer ${token}`,
+    }, options.headers);
+  }
 
-   // Stringify body object
-   if (options && options.body) {
-     options.body = JSON.stringify(options.body);
-   }
+  // Add parameters to url
+  url = _.startsWith(url, '/') ? `${strapi.backendURL}${url}` : url;
 
-   return fetch(url, options)
+  if (options && options.params) {
+    const params = formatQueryParams(options.params);
+    url = `${url}?${params}`;
+  }
+
+  // Stringify body object
+  if (options && options.body && stringify) {
+    options.body = JSON.stringify(options.body);
+  }
+
+  return fetch(url, options)
     .then(checkStatus)
     .then(parseJSON)
     .then((response) => {
       if (shouldWatchServerRestart) {
+        // Display the global OverlayBlocker
+        strapi.lockApp();
         return serverRestartWatcher(response);
       }
 
       return response;
     });
- }
+}
